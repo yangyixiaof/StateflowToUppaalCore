@@ -1,0 +1,4265 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+<declaration>// Place global declarations here.
+// Place global declarations here.
+typedef struct
+{
+    int mEvent;
+    int mDest;
+    int mDestCPosition;// This is state ID. Only activation used , this is what the child state who send the activation ID is.
+    int mInfo;
+    bool mValid;
+    int mAutomatonType;
+    int mCEPosition;   // This is state ID.
+    int mPahse;
+} StackFrame;
+
+const int MaxStackSize = 512;
+const int aConditionalAutomaton = 0;
+const int aCommonAutomaton = 1;
+const int aControllerAutomaton = 2;
+const int aControllerActionAutomaton = 3;
+const int vValidEventBase = 40;
+const int eTrigger = vValidEventBase;
+const int eActiveChild = -19;
+const int eActiveParallel = -18;
+const int eChildOver = -17;
+const int eSelfLogicOver = -16;
+const int eDispathToSelfLogic = -15;
+const int eDuring = -14;
+const int eExitActionOver = -13;
+const int eDeActivationJudgeOver = -12;
+const int eDefaultActivation = -11;
+const int eDeActivation = -10;
+const int eActivationJudgeOver = -9;
+const int eActivation = -8;
+const int eTransToStateDirectly = -7;
+const int eDeActivationOver = -5;
+//const int eActivationOver = -4;
+const int eJudgeActionOver = -3;
+const int mStatusActive = -5;
+const int mStatusDeActive = -6;
+const int iStayOnStack = -1;
+const int iConsumedStack = 0;
+const int iTransOnlyBack = -12;
+const int iDuringOver = -13;
+const int iSelfLogicOver = -14;
+const int iCouldDispatchToParallel = -15;
+const int iActivationDrivenEvent = -16;
+const int iOnlyToThisState = -17;
+
+
+int mEmptyOp = 0;
+
+int mActStopStateID = -1;
+
+//int RecentFirstActivationIdx = -1;
+//int RecentFirstDeActivationIdx = -1;
+
+int mExecutionStackTop = -1;
+StackFrame mExecutionStack[MaxStackSize+1];
+
+//stack record.
+int mStackTopDestChildRecord;
+int mStackTopEventIdRecord;
+
+//history state used both by runner and controller.
+//int mSSIDHistoryState = -1;etc.
+
+// history state used both by runner and controller.
+int mChartHistoryState = -1;
+int mChart_ContainerHistoryState = -1;
+int mChart_Container_AHistoryState = -1;
+int mChart_Container_BHistoryState = -1;
+int mChart_Container_B_BCountHistoryState = -1;
+int mChart_Container_CHistoryState = -1;
+
+// state child active used both by runner and controller.
+bool mChartChildActive = false;
+bool mChart_ContainerChildActive = false;
+bool mChart_Container_AChildActive = false;
+bool mChart_Container_BChildActive = false;
+bool mChart_Container_B_BCountChildActive = false;
+bool mChart_Container_CChildActive = false;
+
+// state childs if exist a valid path used both by runner and controller.
+bool mChartExistPath = false;
+bool mChart_ContainerExistPath = false;
+bool mChart_Container_AExistPath = false;
+bool mChart_Container_BExistPath = false;
+bool mChart_Container_B_BCountExistPath = false;
+bool mChart_Container_CExistPath = false;
+
+// state common automaton if lose control.
+bool mChartLoseControl = false;
+bool mChart_ContainerLoseControl = false;
+bool mChart_Container_ALoseControl = false;
+bool mChart_Container_BLoseControl = false;
+bool mChart_Container_B_BCountLoseControl = false;
+bool mChart_Container_CLoseControl = false;
+
+
+// ---------------------Print state id.e.g.Iterate StateManager.---------------------
+//Chart's id=1
+//Chart_Container's id=5
+//Chart_Container_A's id=6
+//Chart_Container_B's id=4
+//Chart_Container_A_A1's id=2
+//Chart_Container_A_A2's id=8
+//Chart_Container_B_B1's id=9
+//Chart_Container_B_BCount_B2's id=12
+//Chart_Container_B_B3's id=10
+//Chart_Container_B_BCount's id=11
+//Chart_Container_C's id=7
+//Chart_Container_C_C1's id=13
+//Chart_Container_C_C2's id=14
+
+
+// ---------------------Print modified data.e.g.Iterate StateManager.---------------------
+// this is just a overview.
+//int Chart_CLK = 0;
+//bool Chart_result = false;
+//int Chart_x = 0;
+//int Chart_y = 1;
+//int Chart_z = 0;
+
+
+// ---------------------Print modified event.e.g.Iterate EventRegistry.---------------------
+//value -1 means unused.
+//switch_off's id=-1
+//switch_on's id=41
+
+// ---------------------Print only used event.e.g.Iterate EventRegistry.---------------------
+//unappeared event means unused.
+//Chart_switch_on's id=41
+//sec's id=40
+
+int Chart_CLK = 0;
+int Chart_Container_A_A1EventCounter[1];
+bool Chart_result = false;
+int Chart_x = 0;
+int Chart_y = 1;
+int Chart_z = 0;
+int mChartChildPath[1];
+int mChartPathSelect[1];
+const int mChartPathSelectLength = 1;
+int mChart_Container_AChildPath[1];
+int mChart_Container_APathSelect[1];
+const int mChart_Container_APathSelectLength = 1;
+int mChart_Container_BChildPath[2];
+int mChart_Container_BPathSelect[2];
+const int mChart_Container_BPathSelectLength = 2;
+int mChart_Container_B_BCountChildPath[1];
+int mChart_Container_B_BCountPathSelect[1];
+const int mChart_Container_B_BCountPathSelectLength = 1;
+int mChart_Container_CChildPath[1];
+int mChart_Container_CPathSelect[1];
+const int mChart_Container_CPathSelectLength = 1;
+bool mIfIncArray[1];
+int mIfIncArrayLength = 1;
+
+void ClearChartPathSelect()
+{
+    int i = mChartPathSelectLength-1;
+    while (i &gt;= 0)
+    {
+        mChartPathSelect[i] = 1;
+        i--;
+    }
+}
+
+void ClearChartPathSelectAtDepth(int depth)
+{
+    mChartPathSelect[depth] = 1;
+}
+
+void ClearChart_Container_APathSelect()
+{
+    int i = mChart_Container_APathSelectLength-1;
+    while (i &gt;= 0)
+    {
+        mChart_Container_APathSelect[i] = 1;
+        i--;
+    }
+}
+
+void ClearChart_Container_APathSelectAtDepth(int depth)
+{
+    mChart_Container_APathSelect[depth] = 1;
+}
+
+void Chart_Container_A_A1EventCounterCleaner()
+{
+    int i=0;
+    while(i&gt;=0){
+        Chart_Container_A_A1EventCounter[i]=0;
+        i--;
+    }
+}
+
+int Chart_Container_A_A1EventCounterIdTranslate(int evtid)
+{
+    if (evtid == 40){return 0;}
+    return -1;
+}
+
+void Chart_Container_A_A1EventCounterInc()
+{
+    int evtid = -1;
+    int evtpos = -1;
+    if ((mExecutionStack[mExecutionStackTop].mEvent &gt;= vValidEventBase)){evtid = mExecutionStack[mExecutionStackTop].mEvent;}
+    if ((evtid == -1) &amp;&amp; (mExecutionStack[mExecutionStackTop].mInfo &gt;= vValidEventBase)){evtid = mExecutionStack[mExecutionStackTop].mInfo;}
+    if (evtid == -1){return;}
+    evtpos = Chart_Container_A_A1EventCounterIdTranslate(evtid);
+    if (evtpos == -1){return;}
+    Chart_Container_A_A1EventCounter[evtpos]++;
+}
+
+void ClearChart_Container_BPathSelect()
+{
+    int i = mChart_Container_BPathSelectLength-1;
+    while (i &gt;= 0)
+    {
+        mChart_Container_BPathSelect[i] = 1;
+        i--;
+    }
+}
+
+void ClearChart_Container_BPathSelectAtDepth(int depth)
+{
+    mChart_Container_BPathSelect[depth] = 1;
+}
+
+void ClearChart_Container_B_BCountPathSelect()
+{
+    int i = mChart_Container_B_BCountPathSelectLength-1;
+    while (i &gt;= 0)
+    {
+        mChart_Container_B_BCountPathSelect[i] = 1;
+        i--;
+    }
+}
+
+void ClearChart_Container_B_BCountPathSelectAtDepth(int depth)
+{
+    mChart_Container_B_BCountPathSelect[depth] = 1;
+}
+
+void ClearChart_Container_CPathSelect()
+{
+    int i = mChart_Container_CPathSelectLength-1;
+    while (i &gt;= 0)
+    {
+        mChart_Container_CPathSelect[i] = 1;
+        i--;
+    }
+}
+
+void ClearChart_Container_CPathSelectAtDepth(int depth)
+{
+    mChart_Container_CPathSelect[depth] = 1;
+}
+
+int IfIncIdx(int stateid)
+{
+    if (stateid == 2){return 0;}
+    return -1;
+}
+
+bool IfIncWFunc(int stateid)
+{
+    int pos = IfIncIdx(stateid);
+    if (pos == -1){return false;}
+    return mIfIncArray[pos];
+}
+
+void SetAllIfIncToTrue()
+{
+    int i = mIfIncArrayLength-1;
+    while(i&gt;=0){
+        mIfIncArray[i]=true;
+        i--;
+    }
+}
+
+void SetOneIfIncToFalse(int stateid)
+{
+    int pos = IfIncIdx(stateid);
+    if (pos == -1){return;}
+    mIfIncArray[pos] = false;
+}
+
+void WhichInvokeForStateIdAndEvtId(int stateid)
+{
+    if (stateid == -1){return;}
+    if (stateid == 2 &amp;&amp; IfIncWFunc(2)){Chart_Container_A_A1EventCounterInc();}
+}
+
+
+int GetStackTopInfo()
+{
+    return mExecutionStack[mExecutionStackTop].mInfo;
+}
+
+int GetStackTopDest()
+{
+    return mExecutionStack[mExecutionStackTop].mDest;
+}
+
+bool JVSETrigger()
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eTrigger;
+}
+
+bool JTopStackInValid()
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; !mExecutionStack[mExecutionStackTop].mValid;
+}
+
+void PushOneEvent(int event,int dest,int destCPosition,int info,bool valid,int automatonType,int cEPosition,int pahse)
+{
+    int stateid = dest;
+    if (dest == -1)
+    {
+        return;
+    }
+    mExecutionStackTop++;
+    mExecutionStack[mExecutionStackTop].mEvent = event;
+    mExecutionStack[mExecutionStackTop].mDest = dest;
+    mExecutionStack[mExecutionStackTop].mDestCPosition = destCPosition;
+    mExecutionStack[mExecutionStackTop].mInfo = info;
+    mExecutionStack[mExecutionStackTop].mValid = valid;
+    mExecutionStack[mExecutionStackTop].mAutomatonType = automatonType;
+    mExecutionStack[mExecutionStackTop].mCEPosition = cEPosition;
+    mExecutionStack[mExecutionStackTop].mPahse = pahse;
+}
+
+void PopOneEvent()
+{
+    mExecutionStackTop--;
+}
+
+//may be unused.
+//too many state to verify.
+//state space explosion.
+void InvalidAllEventsRelatedWithStateId(int stateid)
+{
+    int i = mExecutionStackTop;
+    while (i &gt;= 0)
+    {
+        if (mExecutionStack[i].mDest == stateid)
+        {
+             mExecutionStack[i].mValid = false;
+        }
+    }
+}
+
+void MSEAutoDest(int autoState)
+{
+    mExecutionStack[mExecutionStackTop].mDest = autoState;
+}
+
+void MSEAutoType(int autoType)
+{
+    mExecutionStack[mExecutionStackTop].mAutomatonType = autoType;
+}
+
+void MSEAutoInfo(int autoInfo)
+{
+    mExecutionStack[mExecutionStackTop].mInfo = autoInfo;
+}
+
+void ResetControllerActionAutomaton(int stateid)
+{
+    PushOneEvent(eTransToStateDirectly,stateid,-1,iTransOnlyBack,true,aControllerActionAutomaton,-1,-1);
+}
+
+void ResetCommonAutomaton(int stateid)
+{
+    PushOneEvent(eTransToStateDirectly,stateid,-1,iTransOnlyBack,true,aCommonAutomaton,-1,-1);
+}
+
+void ResetConditionAutomaton(int stateid,int childstateid)
+{
+    PushOneEvent(eTransToStateDirectly,stateid,childstateid,-1,true,aConditionalAutomaton ,-1,-1);
+}
+
+void RecordTopStackInfoAndPopUp()
+{
+    mStackTopDestChildRecord = mExecutionStack[mExecutionStackTop].mDestCPosition;
+    // &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo &gt; 0; the judge concat to the back of the following judgement.
+    if ((mExecutionStack[mExecutionStackTop].mEvent == eActivation || mExecutionStack[mExecutionStackTop].mEvent == eDeActivation))
+    {
+        mStackTopEventIdRecord = mExecutionStack[mExecutionStackTop].mInfo;
+    }
+    else
+    {
+        if (mExecutionStack[mExecutionStackTop].mEvent &gt;= vValidEventBase)
+        {
+            mStackTopEventIdRecord = mExecutionStack[mExecutionStackTop].mEvent;
+        }
+        else
+        {
+            mStackTopEventIdRecord = -1;
+        }
+    }
+    PopOneEvent();
+}
+
+void RecordTopStackInfoAndNotPopUp()
+{
+    mStackTopDestChildRecord = mExecutionStack[mExecutionStackTop].mDestCPosition;
+    // &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo &gt; 0; the judge concat to the back of the following judgement.
+    if ((mExecutionStack[mExecutionStackTop].mEvent == eActivation || mExecutionStack[mExecutionStackTop].mEvent == eDeActivation))
+    {
+        mStackTopEventIdRecord = mExecutionStack[mExecutionStackTop].mInfo;
+    }
+    else
+    {
+        if (mExecutionStack[mExecutionStackTop].mEvent &gt;= vValidEventBase)
+        {
+            mStackTopEventIdRecord = mExecutionStack[mExecutionStackTop].mEvent;
+        }
+        else
+        {
+            mStackTopEventIdRecord = -1;
+        }
+    }
+}
+
+void DispatchInstantEvent(int event,int dest,int autotype)
+{
+	PushOneEvent(event,dest,-1,-1,true,autotype,-1,-1);
+}
+
+void DispatchFuncEvent(int event,int dest,int info)
+{
+    PushOneEvent(event,dest,-1,info,true,aControllerAutomaton,-1,-1);
+}
+
+void DispatchEvent(int event,int dest,int info,int automaton)
+{
+    PushOneEvent(event,dest,-1,info,true,automaton,-1,-1);
+}
+
+void DispatchControllerEventJudgeDuplicate(int event,int dest,int info)
+{
+    if (mExecutionStackTop &lt; 0 || (mExecutionStack[mExecutionStackTop].mDest != dest &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent != event))
+    {
+        PushOneEvent(event,dest,-1,info,true,aControllerAutomaton,-1,-1);
+    }
+}
+
+void PathTryDelEvtIfOver(int parentstate,int trystate,int pathlen)
+{
+    if (mExecutionStack[mExecutionStackTop].mInfo == 0)
+    {
+        PushOneEvent(eTransToStateDirectly,parentstate,trystate,-1,true,aConditionalAutomaton,-1,-1);
+    }
+    mExecutionStack[mExecutionStackTop].mAutomatonType = aConditionalAutomaton;
+    mExecutionStack[mExecutionStackTop].mInfo++;
+    if (mExecutionStack[mExecutionStackTop].mInfo == pathlen)
+    {
+        PopOneEvent();
+    }
+}
+//Functions commonly used by controller.
+
+//Activation Helper Function
+//Stack Top Judge if Activation is On Stack(should not be consumed).
+bool JVSAO(int stateid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eActivation &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo &lt; 0 &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+//Judge if Activation should be stopped.
+bool JVSAH(int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == mActStopStateID &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool JVSAL(int stateid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eActivation &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo &gt;= 0 &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+//Stack Top Judge if Activation should be Consumed(Leaved).
+
+//active stop dispatching events.
+void ActivationStopDispatch(bool nativeactive)
+{
+	if (nativeactive)
+	{
+		PopOneEvent();
+	}
+}
+
+//Modified OnStack state to Consumed(Leaved)
+void MSO2L()
+{
+    if (mExecutionStack[mExecutionStackTop].mInfo &lt; 0)
+    {
+        mExecutionStack[mExecutionStackTop].mInfo = -mExecutionStack[mExecutionStackTop].mInfo;
+    }
+}
+
+//DeActivation Helper Function
+//Stack Top Judge if Activation is On Stack(should not be consumed).
+bool JVSDaO(int stateid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eDeActivation &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo &lt; 0 &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool JVSDaH(int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == mExecutionStack[mExecutionStackTop].mInfo &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+//Stack Top Judge if Activation should be Consumed(Leaved).
+bool JVSDaL(int stateid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eDeActivation &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo &gt;= 0 &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool JVSTD(int parentstateid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == parentstateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eTransToStateDirectly &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool JVT2I(int parentstateid,int automatonType)
+{
+    return JVSTD(parentstateid,automatonType);
+    //JVSDaL(parentstateid,automatonType) || 
+}
+
+bool JVI2T(int parentstateid,int uppaalorsfstateid,int automatonType)
+{
+    return JVSTD(parentstateid,automatonType) &amp;&amp; mExecutionStack[mExecutionStackTop].mDestCPosition == uppaalorsfstateid;
+}
+
+bool JVSE2MForAll(int stateid,int automatonType)
+{
+	return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool NotDeactiveAndActiveRelatedEvents()
+{
+	return mExecutionStack[mExecutionStackTop].mEvent != eActivation &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent != eDeActivation &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent != eExitActionOver;
+}
+
+bool JVSE2M(int stateid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent &gt;= vValidEventBase &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool JVSEF(int evtid)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == evtid;
+}
+
+bool JVSEF2M(int stateid,int evtid,int automatonType)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == evtid &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == automatonType;
+}
+
+bool JVSEDestPos(int destcpos)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mDestCPosition == destcpos;
+}
+
+void DelEvtIfOnlyBack()
+{
+    if (mExecutionStack[mExecutionStackTop].mEvent == eTransToStateDirectly &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo == iTransOnlyBack)
+    {
+        PopOneEvent();
+    }
+}
+
+//question:
+//mDeactStopStateID does this should put into stack frame?????
+//deacive
+void Deactive(int begindeactiveid,int stopdeactiveid)
+{
+    PushOneEvent(eDeActivation,begindeactiveid,-1,-stopdeactiveid,true,aControllerAutomaton,-1,-1);
+}
+
+//question:
+//mActStopStateID does this should put into stack frame?????
+//active
+void Active(int beginactiveid,int stopactiveid)
+{
+	int info = -1;
+	if (mStackTopEventIdRecord &gt;= vValidEventBase)
+	{
+		info = -mStackTopEventIdRecord;
+	}
+	if (mExecutionStackTop &lt; 0)
+	{
+		info = -eTrigger;
+	}
+    PushOneEvent(eActivation,beginactiveid,-1,info,true,aControllerAutomaton,-1,-1);
+    mActStopStateID = stopactiveid;
+}
+
+bool JNSEDispatchToSelfController(int stateid)
+{
+    return mExecutionStackTop&gt;=0 &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eDispathToSelfLogic &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == stateid &amp;&amp; mExecutionStack[mExecutionStackTop].mInfo == -1 &amp;&amp; mExecutionStack[mExecutionStackTop].mValid &amp;&amp; mExecutionStack[mExecutionStackTop].mAutomatonType == aControllerAutomaton;
+}
+
+void MNSESelfLogicOver(bool nativeactive)
+{
+    //pop up eDispatchToSelfLogic event if have.
+    int info = mExecutionStack[mExecutionStackTop].mInfo;
+    if (mExecutionStack[mExecutionStackTop].mEvent == eDispathToSelfLogic)
+    {
+        PopOneEvent();
+    }
+    if (!nativeactive)
+    {
+        PopOneEvent();
+    }
+    else
+    {
+    	DispatchEvent(eSelfLogicOver,GetStackTopDest(),info,aControllerAutomaton);
+    }
+}
+
+void FirstRoundEventDispatchHandle(bool hasControllerAction, int stateid, bool parentparallel, bool childparallel, int activechildid)
+{
+    bool runduring = false;
+    if (mExecutionStack[mExecutionStackTop].mInfo &lt; 0)
+    {
+        mExecutionStack[mExecutionStackTop].mInfo = -1;
+        DispatchEvent(eDispathToSelfLogic,stateid,-1,aControllerAutomaton);
+        runduring = true;
+    }
+    else
+    {
+        if (mExecutionStack[mExecutionStackTop].mInfo != stateid)
+        {
+            if (!childparallel)
+            {
+                if (activechildid == mExecutionStack[mExecutionStackTop].mInfo)
+                {
+                    mExecutionStack[mExecutionStackTop].mInfo = -1;
+                    DispatchEvent(eDispathToSelfLogic,stateid,-1,aControllerAutomaton);
+                }
+                else
+                {
+                    PopOneEvent();
+                }
+            }
+            else
+            {
+                mExecutionStack[mExecutionStackTop].mDest = mExecutionStack[mExecutionStackTop].mInfo;
+            }
+        }
+        else
+        {
+            runduring = true;
+            if (parentparallel)
+            {
+                mExecutionStack[mExecutionStackTop].mInfo = iOnlyToThisState;
+                DispatchEvent(eDispathToSelfLogic,stateid,iOnlyToThisState,aControllerAutomaton);
+            }
+            else
+            {
+                mExecutionStack[mExecutionStackTop].mInfo = -1;
+                DispatchEvent(eDispathToSelfLogic,stateid,-1,aControllerAutomaton);
+            }
+        }
+    }
+    if (hasControllerAction &amp;&amp; runduring)
+    {
+        PushOneEvent(eDuring,stateid,-1,-1,true,aControllerActionAutomaton,-1,-1);
+        PushOneEvent(eTransToStateDirectly,stateid,-1,iTransOnlyBack,true,aControllerActionAutomaton,-1,-1);
+    }
+}
+
+bool JNSESelfLogicOver(int stateid)
+{
+    return JVSE2MForAll(stateid,aControllerAutomaton) &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eSelfLogicOver;
+}
+
+void MNSEDispatchToSelfLogic(bool nativeactive,int parentstateid,bool isChildSequence,bool hasControllerAction,bool isLoseControl)
+{
+    //pop up during judge over if have.
+    if (mExecutionStack[mExecutionStackTop].mEvent == eDispathToSelfLogic &amp;&amp; mExecutionStack[mExecutionStackTop].mDest == parentstateid)
+    {
+        PopOneEvent();
+    }
+    if (!nativeactive)
+    {
+        PopOneEvent();
+    }
+    else
+    {
+        if (mExecutionStack[mExecutionStackTop].mInfo &lt; 0 &amp;&amp; isChildSequence &amp;&amp; !isLoseControl)
+        {
+        	//let this driven event run by common automaton.
+            MSEAutoType(aCommonAutomaton);
+        }
+        else
+        {
+            MNSESelfLogicOver(nativeactive);
+        }
+    }
+}
+
+void MNSEDispatchToChild(int childstateid,bool haschild)
+{
+    int event = -1;
+    int stateid  = -1;
+    int info = -1;
+    PopOneEvent();
+    //pop eSelfLogicOver.
+    //this function is invoked before the below function and must be invoked imediately just after self logic is over.
+    stateid  = mExecutionStack[mExecutionStackTop].mDest;
+    event = mExecutionStack[mExecutionStackTop].mEvent;
+    info = mExecutionStack[mExecutionStackTop].mInfo;
+    //here don't pop up the driven event
+    if (childstateid != -1)
+    {
+        DispatchEvent(eChildOver,stateid,info,aControllerAutomaton);
+        if (info &lt; 0)
+        {
+        	info = -1;
+        }
+        DispatchEvent(event,childstateid,info,aControllerAutomaton);
+    }
+    else
+    {
+    	DispatchEvent(eChildOver,stateid,info,aControllerAutomaton);
+    }
+}
+
+void MNSEDispatchToParallel(int nextstateid)
+{
+	int event = -1;
+    int info = -1;
+    //pop up child judge over if have.
+    if (mExecutionStack[mExecutionStackTop].mEvent == eChildOver)
+    {
+        PopOneEvent();
+    }
+    event = mExecutionStack[mExecutionStackTop].mEvent;
+    info = mExecutionStack[mExecutionStackTop].mInfo;
+    PopOneEvent();
+    //here pop up the driven event.
+    if (nextstateid != -1 &amp;&amp; info != iOnlyToThisState)
+    {
+        DispatchEvent(event,nextstateid,info,aControllerAutomaton);
+    }
+}
+
+void GenerateDrivenEvent(int chartid)
+{
+    PushOneEvent(eTrigger,chartid,-1,-1,true,aControllerAutomaton,-1,-1);
+}
+
+bool IsStackEmpty()
+{
+    return mExecutionStackTop &lt;= -1;
+}
+
+void HandleeDefaultActivation(bool parallel,int firstchildstateid)
+{
+    int drivenevent = mExecutionStack[mExecutionStackTop].mInfo;
+    int parentstateid = mExecutionStack[mExecutionStackTop].mDest;
+    PopOneEvent();
+    if (parallel)
+    {
+        DispatchControllerEventJudgeDuplicate(eActivation,firstchildstateid,drivenevent);
+    }
+    else
+    {
+        DispatchEvent(drivenevent,parentstateid,iActivationDrivenEvent,aCommonAutomaton);
+    }
+}
+
+void ChildStateFunction(bool haschilds,bool parallel,int firstchildstateid)
+{
+    int drivenevent = mExecutionStack[mExecutionStackTop].mInfo;
+    int parentstateid = mExecutionStack[mExecutionStackTop].mDest;
+    PopOneEvent();
+    if (!haschilds)
+    {
+    	return;
+    }
+    if (parallel)
+    {
+        DispatchControllerEventJudgeDuplicate(eActivation,firstchildstateid,drivenevent);
+    }
+    else
+    {
+        if (mExecutionStack[mExecutionStackTop].mEvent != eActivation)
+        {
+            DispatchEvent(eDefaultActivation,parentstateid,drivenevent,aControllerAutomaton);
+        }
+    }
+}
+
+void ChildStateFunctionWithoutConsiderPreviousEvent(bool shoulddefaultactivation,bool haschilds,bool parallel,int firstchildstateid,int drivenevent,int parentstateid)
+{
+	if (!haschilds)
+    {
+    	return;
+    }
+    if (parallel)
+    {
+        DispatchControllerEventJudgeDuplicate(eActivation,firstchildstateid,drivenevent);
+    }
+    else
+    {
+        if (shoulddefaultactivation)
+        {
+            DispatchEvent(eDefaultActivation,parentstateid,drivenevent,aControllerAutomaton);
+        }
+    }
+}
+
+//This function is invoked in the process of activation.
+//And because when activation the state must be deactive.
+//So transfer to child state is always harmless.
+//Even the state is on specified state wanted to transferred,This function still doesn't have harm.
+void MVToCStateDirectly(int parentstateid,int pCEstateid,int autoType)
+{
+    if (parentstateid == -1)
+    {
+        return;
+    }
+    PushOneEvent(eTransToStateDirectly,parentstateid,pCEstateid,-1,true,autoType,-1,0);
+}
+
+//Firstly should delete eActivation event.
+void HandleeActivation(int parentid,bool active,bool parallel,bool haschild,bool resetcommontodest,bool hasentry,int firstchildstateid)
+{
+    int drivenevent = mExecutionStack[mExecutionStackTop].mInfo;
+    int stateid = mExecutionStack[mExecutionStackTop].mDest;
+    if (active)
+    {
+        if (haschild)
+        {
+            ChildStateFunction(haschild,parallel,firstchildstateid);
+        }
+        else
+        {
+            PopOneEvent();
+        }
+    }
+    else
+    {
+    	PopOneEvent();
+        DispatchEvent(eActiveChild,stateid,drivenevent,aControllerAutomaton);
+        if (hasentry)
+        {
+            DispatchInstantEvent(eActivation,stateid,aControllerActionAutomaton);
+        }
+        if (resetcommontodest)
+        {
+            MVToCStateDirectly(parentid,stateid,aCommonAutomaton);
+        }
+    }
+}
+
+void HandleeActiveChild(bool parentparllel,bool haschilds,bool parallel,int firstchildstateid)
+{
+    int drivenevent = mExecutionStack[mExecutionStackTop].mInfo;
+    int stateid = mExecutionStack[mExecutionStackTop].mDest;
+    bool shoulddefaultactivatoin = true;
+    PopOneEvent();
+    if (mExecutionStackTop &gt;= 0 &amp;&amp; mExecutionStack[mExecutionStackTop].mEvent == eActivation)
+    {
+        shoulddefaultactivatoin = false;
+    }
+    //pop up eActiveChild event, ChildStateFunction will pop up the event.
+    if (parentparllel)
+    {
+        DispatchEvent(eActiveParallel,stateid,drivenevent,aControllerAutomaton);
+    }
+    ChildStateFunctionWithoutConsiderPreviousEvent(shoulddefaultactivatoin,haschilds,parallel,firstchildstateid,drivenevent,stateid);
+}
+
+void HandleeActiveParallel(int nextstateid)
+{
+    int drivenevent = mExecutionStack[mExecutionStackTop].mInfo;
+    PopOneEvent();
+    if (nextstateid != -1)
+    {
+    	DispatchControllerEventJudgeDuplicate(eActivation,nextstateid,drivenevent);
+    }
+}
+
+//the following two function are all on stack, so info is negative.
+void HandleSimpleDeactivation(int parentid)
+{
+    int stopid = -mExecutionStack[mExecutionStackTop].mInfo;
+    PopOneEvent();
+    if (stopid != parentid)
+    {
+        DispatchEvent(eDeActivation,parentid,stopid,aControllerAutomaton);
+        //this dispatch to parent, so dispatch leave stack event.
+    }
+}
+
+void HandleSimpleActivationOnStack(int parentid, int nowstateid)
+{
+    int drivenevent = mExecutionStack[mExecutionStackTop].mInfo;
+    mExecutionStack[mExecutionStackTop].mInfo = -drivenevent;
+    if (!JVSAH(aControllerAutomaton))
+    {
+        PushOneEvent(eActivation, parentid, nowstateid, drivenevent, true, aControllerAutomaton,-1,-1);
+    }
+}
+
+void HandleSimpleActivationLeaveStack(int parentid, int nowstateid)
+{
+    PopOneEvent();
+    MVToCStateDirectly(parentid,nowstateid,aCommonAutomaton);
+}
+
+void HandleInactiveInDeactivation(bool parentparallel,bool hasprevious,int previousid,int parentid)
+{
+    int stopid = mExecutionStack[mExecutionStackTop].mInfo;
+    PopOneEvent();
+    if (parentparallel &amp;&amp; hasprevious)
+    {
+        //sent to previous.
+        DispatchEvent(eDeActivation,previousid,-stopid,aControllerAutomaton);
+    }
+    else
+    {
+        if (stopid != parentid)
+        {
+            DispatchEvent(eDeActivation,parentid,stopid,aControllerAutomaton);
+            //this dispatch to parent, so dispatch leave stack event.
+        }
+    }
+}
+
+void HandleActiveInDeactivation(bool hasexitaction,bool haschild,bool parallel)
+{
+    int stopid = mExecutionStack[mExecutionStackTop].mInfo;
+    int stateid = mExecutionStack[mExecutionStackTop].mDest;
+    PopOneEvent();
+    DispatchEvent(eExitActionOver,stateid,stopid,aControllerAutomaton);
+    if (haschild &amp;&amp; !parallel)
+    {
+        ResetCommonAutomaton(stateid);
+    }
+    if (hasexitaction)
+    {
+    	DispatchEvent(eDeActivation,stateid,stopid,aControllerActionAutomaton);
+    	ResetControllerActionAutomaton(stateid);
+    }
+}
+
+void HandleeExitActionOver(bool parentparallel,bool hasprevious,int previousid,int parentid)
+{
+    int stopid = mExecutionStack[mExecutionStackTop].mInfo;
+    int stateid = mExecutionStack[mExecutionStackTop].mDest;
+    PopOneEvent();
+    //pop up eExitActionOver event.
+    //InvalidAllEventsRelatedWithStateId(stateid);
+    if (parentparallel &amp;&amp; hasprevious)
+    {
+        DispatchEvent(eDeActivation,previousid,-stopid,aControllerAutomaton);
+    }
+    else
+    {
+    	if (stopid != parentid)
+        {
+            DispatchEvent(eDeActivation,parentid,stopid,aControllerAutomaton);
+            //this dispatch to parent, so dispatch leave stack event.
+        }
+    }
+}
+
+void CommonActionEventConsumed(bool parentparentchildparallel,bool istargetstate)
+{
+    if (mExecutionStack[mExecutionStackTop].mInfo == iActivationDrivenEvent)
+    {
+        if (istargetstate)
+        {
+            RecordTopStackInfoAndPopUp();
+        }
+        else
+        {
+            RecordTopStackInfoAndNotPopUp();
+        }
+    }
+    else
+    {
+        if (parentparentchildparallel)
+        {
+            RecordTopStackInfoAndNotPopUp();
+            if (istargetstate)
+            {
+                DispatchEvent(eChildOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+            }
+        }
+        else
+        {
+            if (istargetstate)
+            {
+                RecordTopStackInfoAndPopUp();
+            }
+            else
+            {
+                RecordTopStackInfoAndNotPopUp();
+            }
+        }
+    }
+}
+</declaration>
+
+<template>
+<name>all_controller</name>
+<declaration>// Place local declarations here.
+int mDrivenTime = 0;
+bool mFirstActivated = false;
+int mTotalTime = 0;
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">all_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="320" y="190">JTopStackInValid()</label>
+    <label kind="assignment" x="320" y="205">PopOneEvent()</label>
+    <nail x="160" y="190"/>
+    <nail x="320" y="190"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="288" y="270">!mFirstActivated</label>
+    <label kind="assignment" x="288" y="285">mFirstActivated=true,Active(1,1)</label>
+    <nail x="192" y="270"/>
+    <nail x="288" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="368" y="320">mFirstActivated&amp;&amp;IsStackEmpty() &amp;&amp; mDrivenTime &lt; 1</label>
+    <label kind="assignment" x="368" y="335">mTotalTime=mTotalTime+1,mDrivenTime=mDrivenTime+1</label>
+    <nail x="112" y="320"/>
+    <nail x="368" y="320"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="448" y="370">mFirstActivated&amp;&amp;IsStackEmpty() &amp;&amp; mDrivenTime &gt;= 1 &amp;&amp; mTotalTime &lt;= 10</label>
+    <label kind="assignment" x="448" y="385">mDrivenTime=mDrivenTime-1,SetAllIfIncToTrue(),GenerateDrivenEvent(1)</label>
+    <nail x="32" y="370"/>
+    <nail x="448" y="370"/>
+</transition>
+</template>
+<template>
+<name>junc_49</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">junc_49_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(3,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(4)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(3,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(4,3)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(3,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(4,3)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(3,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+bool JHV()
+{
+    return mChartHistoryState != -1;
+}
+
+int GHS()
+{
+    return mChartHistoryState;
+}
+
+bool IsLoseControl()
+{
+    return mChartLoseControl;
+}
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">Chart_ctrl_initial</name>
+    <urgent/>
+</location>
+<location id="99996" x = "880" y = "210">
+    <urgent/>
+</location>
+<location id="99995" x = "0" y = "210">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="99996"/>
+    <label kind="guard" x="528" y="276">JVSAO(1,aControllerAutomaton)</label>
+    <label kind="assignment" x="528" y="291">MSO2L()</label>
+    <nail x="558" y="176"/>
+</transition>
+<transition>
+    <source ref="99996"/>
+    <target ref="0"/>
+    <label kind="guard" x="530" y="325">JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="530" y="340">ActivationStopDispatch(JNCRA())</label>
+    <nail x="560" y="225"/>
+</transition>
+<transition>
+    <source ref="99996"/>
+    <target ref="0"/>
+    <label kind="guard" x="547" y="325">!JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="547" y="340">PushOneEvent(eActivation,-1,1,-GetStackTopInfo(),true,aControllerAutomaton,-1,-1)</label>
+    <nail x="562" y="275"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="215" y="510">JVSEF2M(1,eDefaultActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="215" y="525">HandleeDefaultActivation(false,-1)</label>
+    <nail x="280" y="290"/>
+    <nail x="290" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="270" y="470">JVSAL(1,aControllerAutomaton)</label>
+    <label kind="assignment" x="270" y="485">HandleeActivation(-1,JNCRA(),false,true,false,false,-1),MNRA()</label>
+    <nail x="304" y="322"/>
+    <nail x="330" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="340" y="380">JVSEF2M(1,eActiveChild,aControllerAutomaton)</label>
+    <label kind="assignment" x="340" y="395">HandleeActiveChild(false,true,false,-1)</label>
+    <nail x="328" y="354"/>
+    <nail x="370" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="395" y="340">JVSEF2M(1,eActiveParallel,aControllerAutomaton)</label>
+    <label kind="assignment" x="395" y="355">HandleeActiveParallel(-1)</label>
+    <nail x="352" y="386"/>
+    <nail x="410" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99995"/>
+    <label kind="guard" x="84" y="374">JVSDaO(1,aControllerAutomaton)</label>
+    <label kind="assignment" x="84" y="389">MSO2L()</label>
+    <nail x="114" y="274"/>
+</transition>
+<transition>
+    <source ref="99995"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="325">!(JNCRA())</label>
+    <nail x="120" y="225"/>
+</transition>
+<transition>
+    <source ref="99995"/>
+    <target ref="0"/>
+    <label kind="guard" x="111" y="225">JNCRA()</label>
+    <label kind="assignment" x="111" y="240">MSEAutoDest(GHS()),MSEAutoInfo(-GetStackTopInfo())</label>
+    <nail x="126" y="175"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="125" y="540">JVSEF2M(1,eDeActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="125" y="555">PopOneEvent()</label>
+    <nail x="190" y="260"/>
+    <nail x="200" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="305" y="105">JVSE2M(1,aControllerAutomaton) &amp;&amp; JVSETrigger()</label>
+    <label kind="assignment" x="305" y="120">WhichInvokeForStateIdAndEvtId(GHS()),FirstRoundEventDispatchHandle(false, 1,false,false,GHS())</label>
+    <nail x="205" y="205"/>
+    <nail x="275" y="205"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="345" y="80">JVSE2M(1,aControllerAutomaton) &amp;&amp; !JVSETrigger()</label>
+    <label kind="assignment" x="345" y="95">FirstRoundEventDispatchHandle(false, 1,false,false,GHS())</label>
+    <nail x="165" y="180"/>
+    <nail x="315" y="180"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="385" y="55">JVSEF2M(1,eDispathToSelfLogic,aControllerAutomaton)</label>
+    <label kind="assignment" x="385" y="70">MNSEDispatchToSelfLogic(JNCRA(),1,true,false,IsLoseControl())</label>
+    <nail x="125" y="155"/>
+    <nail x="355" y="155"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="425" y="30">JNSESelfLogicOver(1)</label>
+    <label kind="assignment" x="425" y="45">MNSEDispatchToChild(GHS(),true)</label>
+    <nail x="85" y="130"/>
+    <nail x="395" y="130"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="465" y="5">JVSEF2M(1,eChildOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="465" y="20">MNSEDispatchToParallel(-1)</label>
+    <nail x="45" y="105"/>
+    <nail x="435" y="105"/>
+</transition>
+</template>
+<template>
+<name>Chart</name>
+<declaration>// Place local declarations here.
+bool mTryFindPath = false;
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">Chart_serial_initial</name>
+    <urgent/>
+</location>
+<location id="5" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="75" y="200">(!mChartExistPath)&amp;&amp;JVSE2M(1,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="215">CommonAutomatonCommunicateWithControllerAndConditional(1,0),ClearChartPathSelect()</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="5"/>
+    <label kind="guard" x="100" y="300">JVI2T(1,5,1)</label>
+    <label kind="assignment" x="100" y="315">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="5"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="300">JVT2I(1,1)</label>
+    <label kind="assignment" x="50" y="315">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="5"/>
+    <label kind="guard" x="15" y="250">(mChartChildPath[0] == 0)&amp;&amp;(mChartExistPath)&amp;&amp;JVSE2M(1,aCommonAutomaton)</label>
+    <label kind="assignment" x="15" y="265">mChartExistPath = false,mChartHistoryState=-1,mChartLoseControl=false,mChartHistoryState=5,mTryFindPath = false,CommonActionEventConsumed(false,true),Active(5,5)</label>
+    <nail x="30" y="200"/>
+</transition>
+<transition>
+    <source ref="5"/>
+    <target ref="5"/>
+    <label kind="guard" x="75" y="440">(!mChartExistPath)&amp;&amp;JVSE2M(1,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="455">ReturnToController()</label>
+    <nail x="55" y="340"/>
+    <nail x="105" y="340"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+bool JHV()
+{
+    return mChart_ContainerHistoryState != -1;
+}
+
+int GHS()
+{
+    return mChart_ContainerHistoryState;
+}
+
+bool IsLoseControl()
+{
+    return mChart_ContainerLoseControl;
+}
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">Container_ctrl_initial</name>
+    <urgent/>
+</location>
+<location id="99986" x = "880" y = "210">
+    <urgent/>
+</location>
+<location id="99985" x = "0" y = "210">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="99986"/>
+    <label kind="guard" x="528" y="276">JVSAO(5,aControllerAutomaton)</label>
+    <label kind="assignment" x="528" y="291">MSO2L()</label>
+    <nail x="558" y="176"/>
+</transition>
+<transition>
+    <source ref="99986"/>
+    <target ref="0"/>
+    <label kind="guard" x="530" y="325">JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="530" y="340">ActivationStopDispatch(JNCRA())</label>
+    <nail x="560" y="225"/>
+</transition>
+<transition>
+    <source ref="99986"/>
+    <target ref="0"/>
+    <label kind="guard" x="547" y="325">!JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="547" y="340">PushOneEvent(eActivation,1,5,-GetStackTopInfo(),true,aControllerAutomaton,-1,-1)</label>
+    <nail x="562" y="275"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="215" y="510">JVSEF2M(5,eDefaultActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="215" y="525">HandleeDefaultActivation(true,6)</label>
+    <nail x="280" y="290"/>
+    <nail x="290" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="270" y="470">JVSAL(5,aControllerAutomaton)</label>
+    <label kind="assignment" x="270" y="485">HandleeActivation(1,JNCRA(),true,true,true,true,6),(!JNCRA())?mChartHistoryState=5:mEmptyOp=0,MNRA()</label>
+    <nail x="304" y="322"/>
+    <nail x="330" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="340" y="380">JVSEF2M(5,eActiveChild,aControllerAutomaton)</label>
+    <label kind="assignment" x="340" y="395">HandleeActiveChild(false,true,true,6)</label>
+    <nail x="328" y="354"/>
+    <nail x="370" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="395" y="340">JVSEF2M(5,eActiveParallel,aControllerAutomaton)</label>
+    <label kind="assignment" x="395" y="355">HandleeActiveParallel(-1)</label>
+    <nail x="352" y="386"/>
+    <nail x="410" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99985"/>
+    <label kind="guard" x="84" y="374">JVSDaO(5,aControllerAutomaton)</label>
+    <label kind="assignment" x="84" y="389">MSO2L()</label>
+    <nail x="114" y="274"/>
+</transition>
+<transition>
+    <source ref="99985"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="325">!(JNCRA())</label>
+    <nail x="120" y="225"/>
+</transition>
+<transition>
+    <source ref="99985"/>
+    <target ref="0"/>
+    <label kind="guard" x="111" y="225">JNCRA()</label>
+    <label kind="assignment" x="111" y="240">MSEAutoDest(7),MSEAutoInfo(-GetStackTopInfo())</label>
+    <nail x="126" y="175"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="125" y="540">JVSDaL(5,aControllerAutomaton) &amp;&amp; JNCRDA()</label>
+    <label kind="assignment" x="125" y="555">HandleInactiveInDeactivation(false,false,-1,1)</label>
+    <nail x="190" y="260"/>
+    <nail x="200" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="100" y="500">JVSDaL(5,aControllerAutomaton) &amp;&amp; JNCRA()</label>
+    <label kind="assignment" x="100" y="515">HandleActiveInDeactivation(false,true,true),MNRDA()</label>
+    <nail x="166" y="292"/>
+    <nail x="160" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="410">JVSEF2M(5,eExitActionOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="90" y="425">HandleeExitActionOver(false,false,-1,1)</label>
+    <nail x="142" y="324"/>
+    <nail x="120" y="310"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="305" y="105">JVSE2M(5,aControllerAutomaton) &amp;&amp; JVSETrigger()</label>
+    <label kind="assignment" x="305" y="120">FirstRoundEventDispatchHandle(true, 5,false,true,GHS())</label>
+    <nail x="205" y="205"/>
+    <nail x="275" y="205"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="345" y="80">JVSE2M(5,aControllerAutomaton) &amp;&amp; !JVSETrigger()</label>
+    <label kind="assignment" x="345" y="95">FirstRoundEventDispatchHandle(true, 5,false,true,GHS())</label>
+    <nail x="165" y="180"/>
+    <nail x="315" y="180"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="385" y="55">JVSEF2M(5,eDispathToSelfLogic,aControllerAutomaton)</label>
+    <label kind="assignment" x="385" y="70">MNSESelfLogicOver(JNCRA())</label>
+    <nail x="125" y="155"/>
+    <nail x="355" y="155"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="425" y="30">JNSESelfLogicOver(5)</label>
+    <label kind="assignment" x="425" y="45">MNSEDispatchToChild(6,true)</label>
+    <nail x="85" y="130"/>
+    <nail x="395" y="130"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="465" y="5">JVSEF2M(5,eChildOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="465" y="20">MNSEDispatchToParallel(-1)</label>
+    <nail x="45" y="105"/>
+    <nail x="435" y="105"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_ctrlaction</name>
+<declaration>// Place local declarations here.
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">Container_ctrl_act_initial</name>
+    <urgent/>
+</location>
+<location id="99993" x = "840" y = "1040">
+    <urgent/>
+</location>
+<location id="99992" x = "920" y = "1080">
+    <urgent/>
+</location>
+<location id="99991" x = "1000" y = "1120">
+    <urgent/>
+</location>
+<location id="99990" x = "1080" y = "1160">
+    <urgent/>
+</location>
+<location id="99989" x = "1160" y = "1200">
+    <urgent/>
+</location>
+<location id="99988" x = "40" y = "115">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSEF2M(5,eTransToStateDirectly,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="235" y="375">PopOneEvent()</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="99993"/>
+    <target ref="0"/>
+    <label kind="guard" x="550" y="710">JVT2I(5,3)</label>
+    <label kind="assignment" x="550" y="725">DelEvtIfOnlyBack()</label>
+    <nail x="580" y="610"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99993"/>
+    <label kind="guard" x="510" y="740">JVSEF2M(5,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="510" y="755">Chart_x=0</label>
+    <nail x="540" y="640"/>
+</transition>
+<transition>
+    <source ref="99992"/>
+    <target ref="0"/>
+    <label kind="guard" x="588" y="729">JVT2I(5,3)</label>
+    <label kind="assignment" x="588" y="744">DelEvtIfOnlyBack()</label>
+    <nail x="618" y="629"/>
+</transition>
+<transition>
+    <source ref="99993"/>
+    <target ref="99992"/>
+    <label kind="guard" x="872" y="1116">JVSEF2M(5,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="872" y="1131">
+Chart_y=1</label>
+    <nail x="902" y="1016"/>
+</transition>
+<transition>
+    <source ref="99991"/>
+    <target ref="0"/>
+    <label kind="guard" x="627" y="748">JVT2I(5,3)</label>
+    <label kind="assignment" x="627" y="763">DelEvtIfOnlyBack()</label>
+    <nail x="657" y="648"/>
+</transition>
+<transition>
+    <source ref="99992"/>
+    <target ref="99991"/>
+    <label kind="guard" x="952" y="1156">JVSEF2M(5,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="952" y="1171">
+Chart_CLK=0</label>
+    <nail x="982" y="1056"/>
+</transition>
+<transition>
+    <source ref="99990"/>
+    <target ref="0"/>
+    <label kind="guard" x="666" y="767">JVT2I(5,3)</label>
+    <label kind="assignment" x="666" y="782">DelEvtIfOnlyBack()</label>
+    <nail x="696" y="667"/>
+</transition>
+<transition>
+    <source ref="99991"/>
+    <target ref="99990"/>
+    <label kind="guard" x="1032" y="1196">JVSEF2M(5,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="1032" y="1211">
+Chart_z=0</label>
+    <nail x="1062" y="1096"/>
+</transition>
+<transition>
+    <source ref="99989"/>
+    <target ref="0"/>
+    <label kind="guard" x="706" y="786">JVT2I(5,3)</label>
+    <label kind="assignment" x="706" y="801">DelEvtIfOnlyBack()</label>
+    <nail x="736" y="686"/>
+</transition>
+<transition>
+    <source ref="99990"/>
+    <target ref="99989"/>
+    <label kind="guard" x="1112" y="1236">JVSEF2M(5,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="1112" y="1251">
+Chart_result=false</label>
+    <nail x="1142" y="1136"/>
+</transition>
+<transition>
+    <source ref="99989"/>
+    <target ref="0"/>
+    <label kind="guard" x="685" y="770">JVSEF2M(5,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="685" y="785">PopOneEvent()</label>
+    <nail x="700" y="720"/>
+</transition>
+<transition>
+    <source ref="99988"/>
+    <target ref="0"/>
+    <label kind="guard" x="84" y="319">JVT2I(5,3)</label>
+    <label kind="assignment" x="84" y="334">DelEvtIfOnlyBack()</label>
+    <nail x="114" y="219"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99988"/>
+    <label kind="guard" x="110" y="277">JVSEF2M(5,eDuring,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="110" y="292">Chart_CLK=Chart_CLK+1</label>
+    <nail x="140" y="177"/>
+</transition>
+<transition>
+    <source ref="99988"/>
+    <target ref="0"/>
+    <label kind="guard" x="99" y="269">JVSEF2M(5,eDuring,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="99" y="284">PopOneEvent()</label>
+    <nail x="114" y="219"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container</name>
+<declaration>// Place local declarations here.
+bool mTryFindPath = false;
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">Container_parallel_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="150">JVSE2M(5,aCommonAutomaton)</label>
+    <label kind="assignment" x="90" y="165">PopOneEvent()</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_A_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+bool JHV()
+{
+    return mChart_Container_AHistoryState != -1;
+}
+
+int GHS()
+{
+    return mChart_Container_AHistoryState;
+}
+
+bool IsLoseControl()
+{
+    return mChart_Container_ALoseControl;
+}
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">A_ctrl_initial</name>
+    <urgent/>
+</location>
+<location id="99983" x = "880" y = "210">
+    <urgent/>
+</location>
+<location id="99982" x = "0" y = "210">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="99983"/>
+    <label kind="guard" x="528" y="276">JVSAO(6,aControllerAutomaton)</label>
+    <label kind="assignment" x="528" y="291">MSO2L()</label>
+    <nail x="558" y="176"/>
+</transition>
+<transition>
+    <source ref="99983"/>
+    <target ref="0"/>
+    <label kind="guard" x="530" y="325">JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="530" y="340">ActivationStopDispatch(JNCRA())</label>
+    <nail x="560" y="225"/>
+</transition>
+<transition>
+    <source ref="99983"/>
+    <target ref="0"/>
+    <label kind="guard" x="547" y="325">!JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="547" y="340">PushOneEvent(eActivation,5,6,-GetStackTopInfo(),true,aControllerAutomaton,-1,-1)</label>
+    <nail x="562" y="275"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="215" y="510">JVSEF2M(6,eDefaultActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="215" y="525">HandleeDefaultActivation(false,-1)</label>
+    <nail x="280" y="290"/>
+    <nail x="290" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="270" y="470">JVSAL(6,aControllerAutomaton)</label>
+    <label kind="assignment" x="270" y="485">HandleeActivation(5,JNCRA(),false,true,false,false,-1),MNRA()</label>
+    <nail x="304" y="322"/>
+    <nail x="330" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="340" y="380">JVSEF2M(6,eActiveChild,aControllerAutomaton)</label>
+    <label kind="assignment" x="340" y="395">HandleeActiveChild(true,true,false,-1)</label>
+    <nail x="328" y="354"/>
+    <nail x="370" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="395" y="340">JVSEF2M(6,eActiveParallel,aControllerAutomaton)</label>
+    <label kind="assignment" x="395" y="355">HandleeActiveParallel(4)</label>
+    <nail x="352" y="386"/>
+    <nail x="410" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99982"/>
+    <label kind="guard" x="84" y="374">JVSDaO(6,aControllerAutomaton)</label>
+    <label kind="assignment" x="84" y="389">MSO2L()</label>
+    <nail x="114" y="274"/>
+</transition>
+<transition>
+    <source ref="99982"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="325">!(JNCRA())</label>
+    <nail x="120" y="225"/>
+</transition>
+<transition>
+    <source ref="99982"/>
+    <target ref="0"/>
+    <label kind="guard" x="111" y="225">JNCRA()</label>
+    <label kind="assignment" x="111" y="240">MSEAutoDest(GHS()),MSEAutoInfo(-GetStackTopInfo())</label>
+    <nail x="126" y="175"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="125" y="540">JVSDaL(6,aControllerAutomaton) &amp;&amp; JNCRDA()</label>
+    <label kind="assignment" x="125" y="555">HandleInactiveInDeactivation(true,false,-1,5)</label>
+    <nail x="190" y="260"/>
+    <nail x="200" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="100" y="500">JVSDaL(6,aControllerAutomaton) &amp;&amp; JNCRA()</label>
+    <label kind="assignment" x="100" y="515">HandleActiveInDeactivation(false,true,false),MNRDA()</label>
+    <nail x="166" y="292"/>
+    <nail x="160" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="410">JVSEF2M(6,eExitActionOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="90" y="425">HandleeExitActionOver(true,false,-1,5)</label>
+    <nail x="142" y="324"/>
+    <nail x="120" y="310"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="305" y="105">JVSE2M(6,aControllerAutomaton) &amp;&amp; JVSETrigger()</label>
+    <label kind="assignment" x="305" y="120">WhichInvokeForStateIdAndEvtId(GHS()),FirstRoundEventDispatchHandle(false, 6,true,false,GHS())</label>
+    <nail x="205" y="205"/>
+    <nail x="275" y="205"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="345" y="80">JVSE2M(6,aControllerAutomaton) &amp;&amp; !JVSETrigger()</label>
+    <label kind="assignment" x="345" y="95">FirstRoundEventDispatchHandle(false, 6,true,false,GHS())</label>
+    <nail x="165" y="180"/>
+    <nail x="315" y="180"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="385" y="55">JVSEF2M(6,eDispathToSelfLogic,aControllerAutomaton)</label>
+    <label kind="assignment" x="385" y="70">MNSEDispatchToSelfLogic(JNCRA(),6,true,false,IsLoseControl())</label>
+    <nail x="125" y="155"/>
+    <nail x="355" y="155"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="425" y="30">JNSESelfLogicOver(6)</label>
+    <label kind="assignment" x="425" y="45">MNSEDispatchToChild(GHS(),true)</label>
+    <nail x="85" y="130"/>
+    <nail x="395" y="130"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="465" y="5">JVSEF2M(6,eChildOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="465" y="20">MNSEDispatchToParallel(4)</label>
+    <nail x="45" y="105"/>
+    <nail x="435" y="105"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_A</name>
+<declaration>// Place local declarations here.
+bool mTryFindPath = false;
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">A_serial_initial</name>
+    <urgent/>
+</location>
+<location id="2" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_A_A1</name>
+    <urgent/>
+</location>
+<location id="8" x = "830" y = "1070">
+    <name x="820" y="1055">Chart_Container_A_A2</name>
+    <urgent/>
+</location>
+<location id="99977" x = "330" y = "570">
+    <urgent/>
+</location>
+<location id="99976" x = "580" y = "820">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="75" y="200">(!mChart_Container_AExistPath)&amp;&amp;JVSE2M(6,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="215">CommonAutomatonCommunicateWithControllerAndConditional(6,0),ClearChart_Container_APathSelect()</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="2"/>
+    <label kind="guard" x="100" y="300">JVI2T(6,2,1)</label>
+    <label kind="assignment" x="100" y="315">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="300">JVT2I(6,1)</label>
+    <label kind="assignment" x="50" y="315">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="2"/>
+    <label kind="guard" x="15" y="250">(mChart_Container_AChildPath[0] == 0)&amp;&amp;(mChart_Container_AExistPath)&amp;&amp;JVSE2M(6,aCommonAutomaton)</label>
+    <label kind="assignment" x="15" y="265">mChart_Container_AExistPath = false,mChart_Container_AHistoryState=-1,mChart_Container_ALoseControl=false,mChart_Container_AHistoryState=2,mTryFindPath = false,CommonActionEventConsumed(true,true),Chart_Container_A_A1EventCounterCleaner(),SetOneIfIncToFalse(2)</label>
+    <nail x="30" y="200"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="2"/>
+    <label kind="guard" x="75" y="440">(!mChart_Container_AExistPath)&amp;&amp;JVSE2M(6,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="455">CommonAutomatonCommunicateWithControllerAndConditional(6,2),ClearChart_Container_APathSelect()</label>
+    <nail x="55" y="340"/>
+    <nail x="105" y="340"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="8"/>
+    <label kind="guard" x="205" y="389">JVI2T(6,8,1)</label>
+    <label kind="assignment" x="205" y="404">PopOneEvent()</label>
+    <nail x="235" y="289"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="0"/>
+    <label kind="guard" x="160" y="410">JVT2I(6,1)</label>
+    <label kind="assignment" x="160" y="425">DelEvtIfOnlyBack()</label>
+    <nail x="190" y="310"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="2"/>
+    <label kind="guard" x="140" y="430">(mChart_Container_AChildPath[0] == 1)&amp;&amp;(mChart_Container_AExistPath)&amp;&amp;JVSE2M(6,aCommonAutomaton)</label>
+    <label kind="assignment" x="140" y="445">DispatchEvent(eDeActivationOver,6,-1,aCommonAutomaton),mChart_Container_AExistPath = false</label>
+    <nail x="5" y="380"/>
+    <nail x="155" y="380"/>
+</transition>
+<transition>
+    <source ref="99977"/>
+    <target ref="99976"/>
+    <label kind="assignment" x="390" y="845">DispatchEvent(eJudgeActionOver,6,-1,aCommonAutomaton),DispatchFuncEvent(41,1,-1)</label>
+    <nail x="420" y="730"/>
+</transition>
+<transition>
+    <source ref="99976"/>
+    <target ref="8"/>
+    <label kind="guard" x="640" y="1080">JVSEF2M(6,eJudgeActionOver,1)</label>
+    <label kind="assignment" x="640" y="1095">mChart_Container_AHistoryState=8,PopOneEvent(),mChart_Container_ALoseControl=false,mChart_Container_AHistoryState=8,mTryFindPath = false,CommonActionEventConsumed(true,true)</label>
+    <nail x="670" y="980"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="99977"/>
+    <label kind="guard" x="210" y="510">(mChart_Container_AChildPath[0] == 1)&amp;&amp;JVSEF2M(6,eDeActivationOver,aCommonAutomaton)</label>
+    <label kind="assignment" x="210" y="525">PopOneEvent(),mChart_Container_AHistoryState=-1,mChart_Container_ALoseControl=true</label>
+    <nail x="240" y="410"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="8"/>
+    <label kind="guard" x="825" y="1190">(!mChart_Container_AExistPath)&amp;&amp;JVSE2M(6,aCommonAutomaton)</label>
+    <label kind="assignment" x="825" y="1205">CommonAutomatonCommunicateWithControllerAndConditional(6,8),ClearChart_Container_APathSelect()</label>
+    <nail x="805" y="1090"/>
+    <nail x="855" y="1090"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="8"/>
+    <label kind="guard" x="890" y="1180">(mChart_Container_AChildPath[0] == 2)&amp;&amp;(mChart_Container_AExistPath)&amp;&amp;JVSE2M(6,aCommonAutomaton)</label>
+    <label kind="assignment" x="890" y="1195">DispatchEvent(eDeActivationOver,6,-1,aCommonAutomaton),mChart_Container_AExistPath = false</label>
+    <nail x="755" y="1130"/>
+    <nail x="905" y="1130"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="2"/>
+    <label kind="guard" x="390" y="830">(mChart_Container_AChildPath[0] == 2)&amp;&amp;JVSEF2M(6,eDeActivationOver,aCommonAutomaton)</label>
+    <label kind="assignment" x="390" y="845">PopOneEvent(),mChart_Container_AHistoryState=-1,mChart_Container_ALoseControl=false,mChart_Container_AHistoryState=2,mTryFindPath = false,CommonActionEventConsumed(true,true),Chart_Container_A_A1EventCounterCleaner(),SetOneIfIncToFalse(2)</label>
+    <nail x="420" y="730"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_A_A1_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">A1_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(2,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(6)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(2,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(6,2)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(2,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(6,2)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(2,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_A_A2_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">A2_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(8,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(6)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(8,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(6,8)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(8,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(6,8)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(8,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_A_conditional</name>
+<declaration>// Place local declarations here.
+int mSourceRecordArray[1];
+const int mSourceRecordLength = 1;
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">A_ser_cond_initial</name>
+    <urgent/>
+</location>
+<location id="2" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_A_A1</name>
+    <urgent/>
+</location>
+<location id="99978" x = "80" y = "80">
+    <urgent/>
+</location>
+<location id="8" x = "300" y = "540">
+    <name x="290" y="525">Chart_Container_A_A2</name>
+    <urgent/>
+</location>
+<location id="99975" x = "330" y = "580">
+    <urgent/>
+</location>
+<location id="99974" x = "50" y = "-200">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="150">JVSE2M(6,aConditionalAutomaton)&amp;&amp;mChart_Container_APathSelect[0]==2</label>
+    <label kind="assignment" x="90" y="165">mChart_Container_AExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="145" y="70">JVSEF2M(6,eTransToStateDirectly,aConditionalAutomaton)&amp;&amp;(JVSEDestPos(0))</label>
+    <label kind="assignment" x="145" y="85">PopOneEvent()</label>
+    <nail x="30" y="120"/>
+    <nail x="130" y="120"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="2"/>
+    <label kind="guard" x="145" y="150">JVI2T(6,2,0)</label>
+    <label kind="assignment" x="145" y="165">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="0"/>
+    <label kind="guard" x="65" y="250">JVT2I(6,0)</label>
+    <label kind="assignment" x="65" y="265">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99978"/>
+    <label kind="guard" x="50" y="180">mChart_Container_APathSelect[0]==1&amp;&amp;JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_APathSelect[0]++</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99978"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="180">JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(true)</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_AChildPath[0]=-1</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99978"/>
+    <target ref="2"/>
+    <label kind="guard" x="100" y="300">JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="100" y="315">mChart_Container_AChildPath[0]=0,mChart_Container_AExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="2"/>
+    <label kind="guard" x="145" y="310">JVSE2M(6,aConditionalAutomaton)&amp;&amp;mChart_Container_APathSelect[0]==2</label>
+    <label kind="assignment" x="145" y="325">mChart_Container_AExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="30" y="360"/>
+    <nail x="130" y="360"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="8"/>
+    <label kind="guard" x="220" y="339">JVI2T(6,8,0)</label>
+    <label kind="assignment" x="220" y="354">PopOneEvent()</label>
+    <nail x="235" y="289"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="0"/>
+    <label kind="guard" x="175" y="360">JVT2I(6,0)</label>
+    <label kind="assignment" x="175" y="375">DelEvtIfOnlyBack()</label>
+    <nail x="190" y="310"/>
+</transition>
+<transition>
+    <source ref="2"/>
+    <target ref="99975"/>
+    <label kind="guard" x="211" y="516">mChart_Container_APathSelect[0]==1&amp;&amp;JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="211" y="531">mChart_Container_APathSelect[0]++</label>
+    <nail x="241" y="416"/>
+</transition>
+<transition>
+    <source ref="99975"/>
+    <target ref="2"/>
+    <label kind="guard" x="175" y="550">JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!((Chart_Container_A_A1EventCounter[0]&gt;=(2/1)))</label>
+    <label kind="assignment" x="175" y="565">mChart_Container_AChildPath[0]=-1</label>
+    <nail x="205" y="450"/>
+</transition>
+<transition>
+    <source ref="99975"/>
+    <target ref="8"/>
+    <label kind="guard" x="245" y="690">JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;(Chart_Container_A_A1EventCounter[0]&gt;=(2/1))</label>
+    <label kind="assignment" x="245" y="705">mChart_Container_AChildPath[0]=1,mChart_Container_AExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="275" y="590"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="8"/>
+    <label kind="guard" x="365" y="530">JVSE2M(6,aConditionalAutomaton)&amp;&amp;mChart_Container_APathSelect[0]==2</label>
+    <label kind="assignment" x="365" y="545">mChart_Container_AExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="250" y="580"/>
+    <nail x="350" y="580"/>
+</transition>
+<transition>
+    <source ref="8"/>
+    <target ref="99974"/>
+    <label kind="guard" x="98" y="286">mChart_Container_APathSelect[0]==1&amp;&amp;JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="98" y="301">mChart_Container_APathSelect[0]++</label>
+    <nail x="128" y="186"/>
+</transition>
+<transition>
+    <source ref="99974"/>
+    <target ref="8"/>
+    <label kind="guard" x="145" y="270">JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(true)</label>
+    <label kind="assignment" x="145" y="285">mChart_Container_AChildPath[0]=-1</label>
+    <nail x="175" y="170"/>
+</transition>
+<transition>
+    <source ref="99974"/>
+    <target ref="2"/>
+    <label kind="guard" x="84" y="158">JVSE2M(6,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="84" y="173">mChart_Container_AChildPath[0]=2,Chart_y=Chart_y+1,mChart_Container_AExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="114" y="58"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+bool JHV()
+{
+    return mChart_Container_BHistoryState != -1;
+}
+
+int GHS()
+{
+    return mChart_Container_BHistoryState;
+}
+
+bool IsLoseControl()
+{
+    return mChart_Container_BLoseControl;
+}
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">B_ctrl_initial</name>
+    <urgent/>
+</location>
+<location id="99972" x = "880" y = "210">
+    <urgent/>
+</location>
+<location id="99971" x = "0" y = "210">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="99972"/>
+    <label kind="guard" x="528" y="276">JVSAO(4,aControllerAutomaton)</label>
+    <label kind="assignment" x="528" y="291">MSO2L()</label>
+    <nail x="558" y="176"/>
+</transition>
+<transition>
+    <source ref="99972"/>
+    <target ref="0"/>
+    <label kind="guard" x="530" y="325">JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="530" y="340">ActivationStopDispatch(JNCRA())</label>
+    <nail x="560" y="225"/>
+</transition>
+<transition>
+    <source ref="99972"/>
+    <target ref="0"/>
+    <label kind="guard" x="547" y="325">!JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="547" y="340">PushOneEvent(eActivation,5,4,-GetStackTopInfo(),true,aControllerAutomaton,-1,-1)</label>
+    <nail x="562" y="275"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="215" y="510">JVSEF2M(4,eDefaultActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="215" y="525">HandleeDefaultActivation(false,-1)</label>
+    <nail x="280" y="290"/>
+    <nail x="290" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="270" y="470">JVSAL(4,aControllerAutomaton)</label>
+    <label kind="assignment" x="270" y="485">HandleeActivation(5,JNCRA(),false,true,false,false,-1),MNRA()</label>
+    <nail x="304" y="322"/>
+    <nail x="330" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="340" y="380">JVSEF2M(4,eActiveChild,aControllerAutomaton)</label>
+    <label kind="assignment" x="340" y="395">HandleeActiveChild(true,true,false,-1)</label>
+    <nail x="328" y="354"/>
+    <nail x="370" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="395" y="340">JVSEF2M(4,eActiveParallel,aControllerAutomaton)</label>
+    <label kind="assignment" x="395" y="355">HandleeActiveParallel(7)</label>
+    <nail x="352" y="386"/>
+    <nail x="410" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99971"/>
+    <label kind="guard" x="84" y="374">JVSDaO(4,aControllerAutomaton)</label>
+    <label kind="assignment" x="84" y="389">MSO2L()</label>
+    <nail x="114" y="274"/>
+</transition>
+<transition>
+    <source ref="99971"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="325">!(JNCRA())</label>
+    <nail x="120" y="225"/>
+</transition>
+<transition>
+    <source ref="99971"/>
+    <target ref="0"/>
+    <label kind="guard" x="111" y="225">JNCRA()</label>
+    <label kind="assignment" x="111" y="240">MSEAutoDest(GHS()),MSEAutoInfo(-GetStackTopInfo())</label>
+    <nail x="126" y="175"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="125" y="540">JVSDaL(4,aControllerAutomaton) &amp;&amp; JNCRDA()</label>
+    <label kind="assignment" x="125" y="555">HandleInactiveInDeactivation(true,true,6,5)</label>
+    <nail x="190" y="260"/>
+    <nail x="200" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="100" y="500">JVSDaL(4,aControllerAutomaton) &amp;&amp; JNCRA()</label>
+    <label kind="assignment" x="100" y="515">HandleActiveInDeactivation(false,true,false),MNRDA()</label>
+    <nail x="166" y="292"/>
+    <nail x="160" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="410">JVSEF2M(4,eExitActionOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="90" y="425">HandleeExitActionOver(true,true,6,5)</label>
+    <nail x="142" y="324"/>
+    <nail x="120" y="310"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="305" y="105">JVSE2M(4,aControllerAutomaton) &amp;&amp; JVSETrigger()</label>
+    <label kind="assignment" x="305" y="120">WhichInvokeForStateIdAndEvtId(GHS()),FirstRoundEventDispatchHandle(false, 4,true,false,GHS())</label>
+    <nail x="205" y="205"/>
+    <nail x="275" y="205"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="345" y="80">JVSE2M(4,aControllerAutomaton) &amp;&amp; !JVSETrigger()</label>
+    <label kind="assignment" x="345" y="95">FirstRoundEventDispatchHandle(false, 4,true,false,GHS())</label>
+    <nail x="165" y="180"/>
+    <nail x="315" y="180"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="385" y="55">JVSEF2M(4,eDispathToSelfLogic,aControllerAutomaton)</label>
+    <label kind="assignment" x="385" y="70">MNSEDispatchToSelfLogic(JNCRA(),4,true,false,IsLoseControl())</label>
+    <nail x="125" y="155"/>
+    <nail x="355" y="155"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="425" y="30">JNSESelfLogicOver(4)</label>
+    <label kind="assignment" x="425" y="45">MNSEDispatchToChild(GHS(),true)</label>
+    <nail x="85" y="130"/>
+    <nail x="395" y="130"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="465" y="5">JVSEF2M(4,eChildOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="465" y="20">MNSEDispatchToParallel(7)</label>
+    <nail x="45" y="105"/>
+    <nail x="435" y="105"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B</name>
+<declaration>// Place local declarations here.
+bool mTryFindPath = false;
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">B_serial_initial</name>
+    <urgent/>
+</location>
+<location id="9" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_B_B1</name>
+    <urgent/>
+</location>
+<location id="3" x = "294" y = "282">
+    <name x="284" y="267">SSID49</name>
+    <urgent/>
+</location>
+<location id="99958" x = "330" y = "275">
+    <urgent/>
+</location>
+<location id="10" x = "516" y = "210">
+    <name x="506" y="195">Chart_Container_B_B3</name>
+    <urgent/>
+</location>
+<location id="12" x = "478" y = "378">
+    <name x="468" y="363">Chart_Container_B_BCount_B2</name>
+    <urgent/>
+</location>
+<location id="99955" x = "544" y = "412">
+    <urgent/>
+</location>
+<location id="11" x = "218" y = "112">
+    <name x="208" y="97">BCount</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="75" y="200">(!mChart_Container_BExistPath)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="215">CommonAutomatonCommunicateWithControllerAndConditional(4,0),ClearChart_Container_BPathSelect()</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="9"/>
+    <label kind="guard" x="100" y="300">JVI2T(4,9,1)</label>
+    <label kind="assignment" x="100" y="315">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="300">JVT2I(4,1)</label>
+    <label kind="assignment" x="50" y="315">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="9"/>
+    <label kind="guard" x="15" y="250">(mChart_Container_BChildPath[0] == 0)&amp;&amp;(mChart_Container_BExistPath)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="15" y="265">mChart_Container_BExistPath = false,mChart_Container_BHistoryState=-1,mChart_Container_BLoseControl=false,mChart_Container_BHistoryState=9,mTryFindPath = false,CommonActionEventConsumed(true,true)</label>
+    <nail x="30" y="200"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="9"/>
+    <label kind="guard" x="75" y="440">(!mChart_Container_BExistPath)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="455">CommonAutomatonCommunicateWithControllerAndConditional(4,9),ClearChart_Container_BPathSelect()</label>
+    <nail x="55" y="340"/>
+    <nail x="105" y="340"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="3"/>
+    <label kind="guard" x="191" y="245">JVI2T(4,3,1)</label>
+    <label kind="assignment" x="191" y="260">PopOneEvent()</label>
+    <nail x="221" y="145"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="0"/>
+    <label kind="guard" x="157" y="281">JVT2I(4,1)</label>
+    <label kind="assignment" x="157" y="296">DelEvtIfOnlyBack()</label>
+    <nail x="187" y="181"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="9"/>
+    <label kind="guard" x="140" y="430">(mChart_Container_BChildPath[0] == 1)&amp;&amp;(mChart_Container_BExistPath)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="140" y="445">DispatchEvent(eDeActivationOver,4,-1,aCommonAutomaton),mChart_Container_BExistPath = false</label>
+    <nail x="5" y="380"/>
+    <nail x="155" y="380"/>
+</transition>
+<transition>
+    <source ref="99958"/>
+    <target ref="3"/>
+    <label kind="assignment" x="291" y="442">Chart_y=Chart_y-3,mChart_Container_BLoseControl=false,mChart_Container_BHistoryState=3,mTryFindPath = false,CommonActionEventConsumed(true,false)</label>
+    <nail x="321" y="327"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="99958"/>
+    <label kind="guard" x="167" y="348">(mChart_Container_BChildPath[0] == 1)&amp;&amp;JVSEF2M(4,eDeActivationOver,aCommonAutomaton)</label>
+    <label kind="assignment" x="167" y="363">PopOneEvent(),mChart_Container_BHistoryState=-1,mChart_Container_BLoseControl=true</label>
+    <nail x="197" y="248"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="10"/>
+    <label kind="guard" x="282" y="198">JVI2T(4,10,1)</label>
+    <label kind="assignment" x="282" y="213">PopOneEvent()</label>
+    <nail x="312" y="98"/>
+</transition>
+<transition>
+    <source ref="10"/>
+    <target ref="0"/>
+    <label kind="guard" x="268" y="245">JVT2I(4,1)</label>
+    <label kind="assignment" x="268" y="260">DelEvtIfOnlyBack()</label>
+    <nail x="298" y="145"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="3"/>
+    <label kind="guard" x="289" y="402">(mChart_Container_BChildPath[1] == 2)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="289" y="417">DispatchEvent(eDeActivationOver,4,-1,aCommonAutomaton),mChart_Container_BExistPath = false</label>
+    <nail x="269" y="302"/>
+    <nail x="319" y="302"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="10"/>
+    <label kind="guard" x="360" y="299">(mChart_Container_BChildPath[1] == 2)&amp;&amp;JVSEF2M(4,eDeActivationOver,aCommonAutomaton)</label>
+    <label kind="assignment" x="360" y="314">PopOneEvent(),mChart_Container_BHistoryState=-1,mChart_Container_BLoseControl=false,mChart_Container_BHistoryState=10,mTryFindPath = false,CommonActionEventConsumed(true,true)</label>
+    <nail x="390" y="199"/>
+</transition>
+<transition>
+    <source ref="10"/>
+    <target ref="10"/>
+    <label kind="guard" x="511" y="330">(!mChart_Container_BExistPath)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="511" y="345">ReturnToController()</label>
+    <nail x="491" y="230"/>
+    <nail x="541" y="230"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="12"/>
+    <label kind="guard" x="278" y="289">JVI2T(4,12,1)</label>
+    <label kind="assignment" x="278" y="304">PopOneEvent()</label>
+    <nail x="308" y="189"/>
+</transition>
+<transition>
+    <source ref="12"/>
+    <target ref="0"/>
+    <label kind="guard" x="249" y="329">JVT2I(4,1)</label>
+    <label kind="assignment" x="249" y="344">DelEvtIfOnlyBack()</label>
+    <nail x="279" y="229"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="3"/>
+    <label kind="guard" x="329" y="372">(mChart_Container_BChildPath[1] == 3)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="329" y="387">DispatchEvent(eDeActivationOver,4,-1,aCommonAutomaton),mChart_Container_BExistPath = false</label>
+    <nail x="244" y="322"/>
+    <nail x="344" y="322"/>
+</transition>
+<transition>
+    <source ref="99955"/>
+    <target ref="12"/>
+    <label kind="assignment" x="459" y="554">Chart_z=Chart_x/Chart_y,mChart_Container_BLoseControl=false,mChart_Container_B_BCountHistoryState=12,mTryFindPath = false,CommonActionEventConsumed(true,true),Active(12,11)</label>
+    <nail x="489" y="439"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="99955"/>
+    <label kind="guard" x="412" y="403">(mChart_Container_BChildPath[1] == 3)&amp;&amp;JVSEF2M(4,eDeActivationOver,aCommonAutomaton)</label>
+    <label kind="assignment" x="412" y="418">PopOneEvent(),mChart_Container_BHistoryState=-1,mChart_Container_BLoseControl=true</label>
+    <nail x="442" y="303"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="11"/>
+    <label kind="guard" x="130" y="148">JVI2T(4,11,1)</label>
+    <label kind="assignment" x="130" y="163">PopOneEvent()</label>
+    <nail x="160" y="48"/>
+</transition>
+<transition>
+    <source ref="11"/>
+    <target ref="0"/>
+    <label kind="guard" x="119" y="196">JVT2I(4,1)</label>
+    <label kind="assignment" x="119" y="211">DelEvtIfOnlyBack()</label>
+    <nail x="149" y="96"/>
+</transition>
+<transition>
+    <source ref="11"/>
+    <target ref="11"/>
+    <label kind="guard" x="213" y="232">(!mChart_Container_BExistPath)&amp;&amp;JVSE2M(4,aCommonAutomaton)</label>
+    <label kind="assignment" x="213" y="247">ReturnToController()</label>
+    <nail x="193" y="132"/>
+    <nail x="243" y="132"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_B1_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">B1_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(9,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(4)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(9,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(4,9)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(9,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(4,9)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(9,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_B3_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">B3_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(10,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(4)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(10,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(4,10)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(10,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(4,10)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(10,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_BCount_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+bool JHV()
+{
+    return mChart_Container_B_BCountHistoryState != -1;
+}
+
+int GHS()
+{
+    return mChart_Container_B_BCountHistoryState;
+}
+
+bool IsLoseControl()
+{
+    return mChart_Container_B_BCountLoseControl;
+}
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">BCount_ctrl_initial</name>
+    <urgent/>
+</location>
+<location id="99965" x = "880" y = "210">
+    <urgent/>
+</location>
+<location id="99964" x = "0" y = "210">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="99965"/>
+    <label kind="guard" x="528" y="276">JVSAO(11,aControllerAutomaton)</label>
+    <label kind="assignment" x="528" y="291">MSO2L()</label>
+    <nail x="558" y="176"/>
+</transition>
+<transition>
+    <source ref="99965"/>
+    <target ref="0"/>
+    <label kind="guard" x="530" y="325">JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="530" y="340">ActivationStopDispatch(JNCRA())</label>
+    <nail x="560" y="225"/>
+</transition>
+<transition>
+    <source ref="99965"/>
+    <target ref="0"/>
+    <label kind="guard" x="547" y="325">!JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="547" y="340">PushOneEvent(eActivation,4,11,-GetStackTopInfo(),true,aControllerAutomaton,-1,-1)</label>
+    <nail x="562" y="275"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="215" y="510">JVSEF2M(11,eDefaultActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="215" y="525">HandleeDefaultActivation(false,-1)</label>
+    <nail x="280" y="290"/>
+    <nail x="290" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="270" y="470">JVSAL(11,aControllerAutomaton)</label>
+    <label kind="assignment" x="270" y="485">HandleeActivation(4,JNCRA(),false,true,true,true,-1),(!JNCRA())?mChart_Container_BHistoryState=11:mEmptyOp=0,MNRA()</label>
+    <nail x="304" y="322"/>
+    <nail x="330" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="340" y="380">JVSEF2M(11,eActiveChild,aControllerAutomaton)</label>
+    <label kind="assignment" x="340" y="395">HandleeActiveChild(false,true,false,-1)</label>
+    <nail x="328" y="354"/>
+    <nail x="370" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="395" y="340">JVSEF2M(11,eActiveParallel,aControllerAutomaton)</label>
+    <label kind="assignment" x="395" y="355">HandleeActiveParallel(-1)</label>
+    <nail x="352" y="386"/>
+    <nail x="410" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99964"/>
+    <label kind="guard" x="84" y="374">JVSDaO(11,aControllerAutomaton)</label>
+    <label kind="assignment" x="84" y="389">MSO2L()</label>
+    <nail x="114" y="274"/>
+</transition>
+<transition>
+    <source ref="99964"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="325">!(JNCRA())</label>
+    <nail x="120" y="225"/>
+</transition>
+<transition>
+    <source ref="99964"/>
+    <target ref="0"/>
+    <label kind="guard" x="111" y="225">JNCRA()</label>
+    <label kind="assignment" x="111" y="240">MSEAutoDest(GHS()),MSEAutoInfo(-GetStackTopInfo())</label>
+    <nail x="126" y="175"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="125" y="540">JVSDaL(11,aControllerAutomaton) &amp;&amp; JNCRDA()</label>
+    <label kind="assignment" x="125" y="555">HandleInactiveInDeactivation(false,false,-1,4)</label>
+    <nail x="190" y="260"/>
+    <nail x="200" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="100" y="500">JVSDaL(11,aControllerAutomaton) &amp;&amp; JNCRA()</label>
+    <label kind="assignment" x="100" y="515">HandleActiveInDeactivation(false,true,false),MNRDA()</label>
+    <nail x="166" y="292"/>
+    <nail x="160" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="410">JVSEF2M(11,eExitActionOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="90" y="425">HandleeExitActionOver(false,false,-1,4)</label>
+    <nail x="142" y="324"/>
+    <nail x="120" y="310"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="305" y="105">JVSE2M(11,aControllerAutomaton) &amp;&amp; JVSETrigger()</label>
+    <label kind="assignment" x="305" y="120">WhichInvokeForStateIdAndEvtId(GHS()),FirstRoundEventDispatchHandle(false, 11,false,false,GHS())</label>
+    <nail x="205" y="205"/>
+    <nail x="275" y="205"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="345" y="80">JVSE2M(11,aControllerAutomaton) &amp;&amp; !JVSETrigger()</label>
+    <label kind="assignment" x="345" y="95">FirstRoundEventDispatchHandle(false, 11,false,false,GHS())</label>
+    <nail x="165" y="180"/>
+    <nail x="315" y="180"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="385" y="55">JVSEF2M(11,eDispathToSelfLogic,aControllerAutomaton)</label>
+    <label kind="assignment" x="385" y="70">MNSEDispatchToSelfLogic(JNCRA(),11,true,false,IsLoseControl())</label>
+    <nail x="125" y="155"/>
+    <nail x="355" y="155"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="425" y="30">JNSESelfLogicOver(11)</label>
+    <label kind="assignment" x="425" y="45">MNSEDispatchToChild(GHS(),true)</label>
+    <nail x="85" y="130"/>
+    <nail x="395" y="130"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="465" y="5">JVSEF2M(11,eChildOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="465" y="20">MNSEDispatchToParallel(-1)</label>
+    <nail x="45" y="105"/>
+    <nail x="435" y="105"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_BCount_ctrlaction</name>
+<declaration>// Place local declarations here.
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">BCount_ctrl_act_initial</name>
+    <urgent/>
+</location>
+<location id="99967" x = "360" y = "400">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSEF2M(11,eTransToStateDirectly,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="235" y="375">PopOneEvent()</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="99967"/>
+    <target ref="0"/>
+    <label kind="guard" x="310" y="390">JVT2I(11,3)</label>
+    <label kind="assignment" x="310" y="405">DelEvtIfOnlyBack()</label>
+    <nail x="340" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99967"/>
+    <label kind="guard" x="270" y="420">JVSEF2M(11,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="270" y="435">Chart_result=true</label>
+    <nail x="300" y="320"/>
+</transition>
+<transition>
+    <source ref="99967"/>
+    <target ref="0"/>
+    <label kind="guard" x="325" y="340">JVSEF2M(11,eActivation,aControllerActionAutomaton)</label>
+    <label kind="assignment" x="325" y="355">PopOneEvent()</label>
+    <nail x="340" y="290"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_BCount</name>
+<declaration>// Place local declarations here.
+bool mTryFindPath = false;
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">BCount_serial_initial</name>
+    <urgent/>
+</location>
+<location id="12" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_B_BCount_B2</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="150">(!mChart_Container_B_BCountExistPath)&amp;&amp;JVSE2M(11,aCommonAutomaton)</label>
+    <label kind="assignment" x="90" y="165">CommonAutomatonCommunicateWithControllerAndConditional(11,0),ClearChart_Container_B_BCountPathSelect()</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="12"/>
+    <label kind="guard" x="100" y="300">JVI2T(11,12,1)</label>
+    <label kind="assignment" x="100" y="315">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="12"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="300">JVT2I(11,1)</label>
+    <label kind="assignment" x="50" y="315">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="12"/>
+    <label kind="guard" x="15" y="250">(mChart_Container_B_BCountChildPath[0] == 0)&amp;&amp;(mChart_Container_B_BCountExistPath)&amp;&amp;JVSE2M(11,aCommonAutomaton)</label>
+    <label kind="assignment" x="15" y="265">mChart_Container_B_BCountExistPath = false,mChart_Container_B_BCountHistoryState=-1,mChart_Container_B_BCountLoseControl=false,mChart_Container_B_BCountHistoryState=12,mTryFindPath = false,CommonActionEventConsumed(false,true)</label>
+    <nail x="30" y="200"/>
+</transition>
+<transition>
+    <source ref="12"/>
+    <target ref="12"/>
+    <label kind="guard" x="75" y="440">(!mChart_Container_B_BCountExistPath)&amp;&amp;JVSE2M(11,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="455">ReturnToController()</label>
+    <nail x="55" y="340"/>
+    <nail x="105" y="340"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_BCount_B2_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">B2_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(12,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(11)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(12,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(11,12)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(12,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(11,12)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(12,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_BCount_conditional</name>
+<declaration>// Place local declarations here.
+int mSourceRecordArray[1];
+const int mSourceRecordLength = 1;
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">BCount_ser_cond_initial</name>
+    <urgent/>
+</location>
+<location id="12" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_B_BCount_B2</name>
+    <urgent/>
+</location>
+<location id="99961" x = "80" y = "80">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="120" y="50">JVSE2M(11,aConditionalAutomaton)&amp;&amp;mChart_Container_B_BCountPathSelect[0]==2</label>
+    <label kind="assignment" x="120" y="65">mChart_Container_B_BCountExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="160" y="20">JVSEF2M(11,eTransToStateDirectly,aConditionalAutomaton)&amp;&amp;(JVSEDestPos(0))</label>
+    <label kind="assignment" x="160" y="35">PopOneEvent()</label>
+    <nail x="30" y="120"/>
+    <nail x="130" y="120"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="12"/>
+    <label kind="guard" x="145" y="150">JVI2T(11,12,0)</label>
+    <label kind="assignment" x="145" y="165">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="12"/>
+    <target ref="0"/>
+    <label kind="guard" x="65" y="250">JVT2I(11,0)</label>
+    <label kind="assignment" x="65" y="265">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99961"/>
+    <label kind="guard" x="50" y="180">mChart_Container_B_BCountPathSelect[0]==1&amp;&amp;JVSE2M(11,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_B_BCountPathSelect[0]++</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99961"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="180">JVSE2M(11,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(true)</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_B_BCountChildPath[0]=-1</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99961"/>
+    <target ref="12"/>
+    <label kind="guard" x="100" y="300">JVSE2M(11,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="100" y="315">mChart_Container_B_BCountChildPath[0]=0,mChart_Container_B_BCountExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="12"/>
+    <target ref="12"/>
+    <label kind="guard" x="115" y="410">JVSE2M(11,aConditionalAutomaton)&amp;&amp;mChart_Container_B_BCountPathSelect[0]==1</label>
+    <label kind="assignment" x="115" y="425">mChart_Container_B_BCountExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="30" y="360"/>
+    <nail x="130" y="360"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_B_conditional</name>
+<declaration>// Place local declarations here.
+int mSourceRecordArray[2];
+const int mSourceRecordLength = 2;
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">B_ser_cond_initial</name>
+    <urgent/>
+</location>
+<location id="9" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_B_B1</name>
+    <urgent/>
+</location>
+<location id="99959" x = "80" y = "80">
+    <urgent/>
+</location>
+<location id="3" x = "830" y = "275">
+    <name x="820" y="260">SSID49</name>
+    <urgent/>
+</location>
+<location id="99957" x = "330" y = "580">
+    <urgent/>
+</location>
+<location id="10" x = "516" y = "210">
+    <name x="506" y="195">Chart_Container_B_B3</name>
+    <urgent/>
+</location>
+<location id="99956" x = "580" y = "330">
+    <urgent/>
+</location>
+<location id="12" x = "478" y = "378">
+    <name x="468" y="363">Chart_Container_B_BCount_B2</name>
+    <urgent/>
+</location>
+<location id="99954" x = "580" y = "330">
+    <urgent/>
+</location>
+<location id="11" x = "218" y = "112">
+    <name x="208" y="97">BCount</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="150">JVSE2M(4,aConditionalAutomaton)&amp;&amp;mChart_Container_BPathSelect[0]==2</label>
+    <label kind="assignment" x="90" y="165">mChart_Container_BExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="145" y="70">JVSEF2M(4,eTransToStateDirectly,aConditionalAutomaton)&amp;&amp;(JVSEDestPos(0))</label>
+    <label kind="assignment" x="145" y="85">PopOneEvent()</label>
+    <nail x="30" y="120"/>
+    <nail x="130" y="120"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="9"/>
+    <label kind="guard" x="145" y="150">JVI2T(4,9,0)</label>
+    <label kind="assignment" x="145" y="165">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="0"/>
+    <label kind="guard" x="65" y="250">JVT2I(4,0)</label>
+    <label kind="assignment" x="65" y="265">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99959"/>
+    <label kind="guard" x="50" y="180">mChart_Container_BPathSelect[0]==1&amp;&amp;JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_BPathSelect[0]++</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99959"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="180">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(true)</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_BChildPath[0]=-1</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99959"/>
+    <target ref="9"/>
+    <label kind="guard" x="100" y="300">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="100" y="315">mChart_Container_BChildPath[0]=0,mChart_Container_BExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="9"/>
+    <label kind="guard" x="145" y="310">JVSE2M(4,aConditionalAutomaton)&amp;&amp;mChart_Container_BPathSelect[0]==2</label>
+    <label kind="assignment" x="145" y="325">mChart_Container_BExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="30" y="360"/>
+    <nail x="130" y="360"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="3"/>
+    <label kind="guard" x="206" y="195">JVI2T(4,3,0)</label>
+    <label kind="assignment" x="206" y="210">PopOneEvent()</label>
+    <nail x="221" y="145"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="0"/>
+    <label kind="guard" x="172" y="231">JVT2I(4,0)</label>
+    <label kind="assignment" x="172" y="246">DelEvtIfOnlyBack()</label>
+    <nail x="187" y="181"/>
+</transition>
+<transition>
+    <source ref="9"/>
+    <target ref="99957"/>
+    <label kind="guard" x="211" y="516">mChart_Container_BPathSelect[0]==1&amp;&amp;JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="211" y="531">mSourceRecordArray[1]=1,mChart_Container_BPathSelect[0]++</label>
+    <nail x="241" y="416"/>
+</transition>
+<transition>
+    <source ref="99957"/>
+    <target ref="9"/>
+    <label kind="guard" x="175" y="550">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(JVSEF2M(4,41,aConditionalAutomaton))</label>
+    <label kind="assignment" x="175" y="565">mChart_Container_BChildPath[0]=-1</label>
+    <nail x="205" y="450"/>
+</transition>
+<transition>
+    <source ref="99957"/>
+    <target ref="3"/>
+    <label kind="guard" x="524" y="485">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;JVSEF2M(4,41,aConditionalAutomaton)</label>
+    <label kind="assignment" x="524" y="500">mChart_Container_BChildPath[0]=1,Chart_x=Chart_x+1</label>
+    <nail x="554" y="385"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="9"/>
+    <label kind="guard" x="428" y="447">JVSE2M(4,aConditionalAutomaton)&amp;&amp;mSourceRecordArray[1]==1&amp;&amp;mChart_Container_BPathSelect[1]==3</label>
+    <label kind="assignment" x="428" y="462">mChart_Container_BChildPath[0] = -1,ClearChart_Container_BPathSelectAtDepth(1)</label>
+    <nail x="458" y="347"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="10"/>
+    <label kind="guard" x="297" y="148">JVI2T(4,10,0)</label>
+    <label kind="assignment" x="297" y="163">PopOneEvent()</label>
+    <nail x="312" y="98"/>
+</transition>
+<transition>
+    <source ref="10"/>
+    <target ref="0"/>
+    <label kind="guard" x="283" y="195">JVT2I(4,0)</label>
+    <label kind="assignment" x="283" y="210">DelEvtIfOnlyBack()</label>
+    <nail x="298" y="145"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="99956"/>
+    <label kind="guard" x="685" y="450">mChart_Container_BPathSelect[1]==1&amp;&amp;JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="685" y="465">mChart_Container_BPathSelect[1]++</label>
+    <nail x="715" y="350"/>
+</transition>
+<transition>
+    <source ref="99956"/>
+    <target ref="3"/>
+    <label kind="guard" x="675" y="402">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!((Chart_y&gt;=10))</label>
+    <label kind="assignment" x="675" y="417">mChart_Container_BChildPath[1]=-1</label>
+    <nail x="705" y="302"/>
+</transition>
+<transition>
+    <source ref="99956"/>
+    <target ref="10"/>
+    <label kind="guard" x="474" y="393">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;(Chart_y&gt;=10)</label>
+    <label kind="assignment" x="474" y="408">mChart_Container_BChildPath[1]=2,mChart_Container_BExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="504" y="293"/>
+</transition>
+<transition>
+    <source ref="10"/>
+    <target ref="10"/>
+    <label kind="guard" x="551" y="300">JVSE2M(4,aConditionalAutomaton)&amp;&amp;mChart_Container_BPathSelect[0]==1</label>
+    <label kind="assignment" x="551" y="315">mChart_Container_BExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="466" y="250"/>
+    <nail x="566" y="250"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="12"/>
+    <label kind="guard" x="293" y="239">JVI2T(4,12,0)</label>
+    <label kind="assignment" x="293" y="254">PopOneEvent()</label>
+    <nail x="308" y="189"/>
+</transition>
+<transition>
+    <source ref="12"/>
+    <target ref="0"/>
+    <label kind="guard" x="264" y="279">JVT2I(4,0)</label>
+    <label kind="assignment" x="264" y="294">DelEvtIfOnlyBack()</label>
+    <nail x="279" y="229"/>
+</transition>
+<transition>
+    <source ref="3"/>
+    <target ref="99954"/>
+    <label kind="guard" x="685" y="450">mChart_Container_BPathSelect[1]==2&amp;&amp;JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="685" y="465">mChart_Container_BPathSelect[1]++</label>
+    <nail x="715" y="350"/>
+</transition>
+<transition>
+    <source ref="99954"/>
+    <target ref="3"/>
+    <label kind="guard" x="675" y="402">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!((Chart_x==3))</label>
+    <label kind="assignment" x="675" y="417">mChart_Container_BChildPath[1]=-1</label>
+    <nail x="705" y="302"/>
+</transition>
+<transition>
+    <source ref="99954"/>
+    <target ref="12"/>
+    <label kind="guard" x="520" y="499">JVSE2M(4,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;(Chart_x==3)</label>
+    <label kind="assignment" x="520" y="514">mChart_Container_BChildPath[1]=3,mChart_Container_BExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="550" y="399"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="11"/>
+    <label kind="guard" x="145" y="98">JVI2T(4,11,0)</label>
+    <label kind="assignment" x="145" y="113">PopOneEvent()</label>
+    <nail x="160" y="48"/>
+</transition>
+<transition>
+    <source ref="11"/>
+    <target ref="0"/>
+    <label kind="guard" x="134" y="146">JVT2I(4,0)</label>
+    <label kind="assignment" x="134" y="161">DelEvtIfOnlyBack()</label>
+    <nail x="149" y="96"/>
+</transition>
+<transition>
+    <source ref="11"/>
+    <target ref="11"/>
+    <label kind="guard" x="253" y="202">JVSE2M(4,aConditionalAutomaton)&amp;&amp;mChart_Container_BPathSelect[0]==1</label>
+    <label kind="assignment" x="253" y="217">mChart_Container_BExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="168" y="152"/>
+    <nail x="268" y="152"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_C_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+bool JHV()
+{
+    return mChart_Container_CHistoryState != -1;
+}
+
+int GHS()
+{
+    return mChart_Container_CHistoryState;
+}
+
+bool IsLoseControl()
+{
+    return mChart_Container_CLoseControl;
+}
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">C_ctrl_initial</name>
+    <urgent/>
+</location>
+<location id="99952" x = "880" y = "210">
+    <urgent/>
+</location>
+<location id="99951" x = "0" y = "210">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="99952"/>
+    <label kind="guard" x="528" y="276">JVSAO(7,aControllerAutomaton)</label>
+    <label kind="assignment" x="528" y="291">MSO2L()</label>
+    <nail x="558" y="176"/>
+</transition>
+<transition>
+    <source ref="99952"/>
+    <target ref="0"/>
+    <label kind="guard" x="530" y="325">JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="530" y="340">ActivationStopDispatch(JNCRA())</label>
+    <nail x="560" y="225"/>
+</transition>
+<transition>
+    <source ref="99952"/>
+    <target ref="0"/>
+    <label kind="guard" x="547" y="325">!JVSAH(aControllerAutomaton)</label>
+    <label kind="assignment" x="547" y="340">PushOneEvent(eActivation,5,7,-GetStackTopInfo(),true,aControllerAutomaton,-1,-1)</label>
+    <nail x="562" y="275"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="215" y="510">JVSEF2M(7,eDefaultActivation,aControllerAutomaton)</label>
+    <label kind="assignment" x="215" y="525">HandleeDefaultActivation(false,-1)</label>
+    <nail x="280" y="290"/>
+    <nail x="290" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="270" y="470">JVSAL(7,aControllerAutomaton)</label>
+    <label kind="assignment" x="270" y="485">HandleeActivation(5,JNCRA(),false,true,false,false,-1),MNRA()</label>
+    <nail x="304" y="322"/>
+    <nail x="330" y="270"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="340" y="380">JVSEF2M(7,eActiveChild,aControllerAutomaton)</label>
+    <label kind="assignment" x="340" y="395">HandleeActiveChild(true,true,false,-1)</label>
+    <nail x="328" y="354"/>
+    <nail x="370" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="395" y="340">JVSEF2M(7,eActiveParallel,aControllerAutomaton)</label>
+    <label kind="assignment" x="395" y="355">HandleeActiveParallel(-1)</label>
+    <nail x="352" y="386"/>
+    <nail x="410" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99951"/>
+    <label kind="guard" x="84" y="374">JVSDaO(7,aControllerAutomaton)</label>
+    <label kind="assignment" x="84" y="389">MSO2L()</label>
+    <nail x="114" y="274"/>
+</transition>
+<transition>
+    <source ref="99951"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="325">!(JNCRA())</label>
+    <nail x="120" y="225"/>
+</transition>
+<transition>
+    <source ref="99951"/>
+    <target ref="0"/>
+    <label kind="guard" x="111" y="225">JNCRA()</label>
+    <label kind="assignment" x="111" y="240">MSEAutoDest(GHS()),MSEAutoInfo(-GetStackTopInfo())</label>
+    <nail x="126" y="175"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="125" y="540">JVSDaL(7,aControllerAutomaton) &amp;&amp; JNCRDA()</label>
+    <label kind="assignment" x="125" y="555">HandleInactiveInDeactivation(true,true,4,5)</label>
+    <nail x="190" y="260"/>
+    <nail x="200" y="290"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="100" y="500">JVSDaL(7,aControllerAutomaton) &amp;&amp; JNCRA()</label>
+    <label kind="assignment" x="100" y="515">HandleActiveInDeactivation(false,true,false),MNRDA()</label>
+    <nail x="166" y="292"/>
+    <nail x="160" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="410">JVSEF2M(7,eExitActionOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="90" y="425">HandleeExitActionOver(true,true,4,5)</label>
+    <nail x="142" y="324"/>
+    <nail x="120" y="310"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="305" y="105">JVSE2M(7,aControllerAutomaton) &amp;&amp; JVSETrigger()</label>
+    <label kind="assignment" x="305" y="120">WhichInvokeForStateIdAndEvtId(GHS()),FirstRoundEventDispatchHandle(false, 7,true,false,GHS())</label>
+    <nail x="205" y="205"/>
+    <nail x="275" y="205"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="345" y="80">JVSE2M(7,aControllerAutomaton) &amp;&amp; !JVSETrigger()</label>
+    <label kind="assignment" x="345" y="95">FirstRoundEventDispatchHandle(false, 7,true,false,GHS())</label>
+    <nail x="165" y="180"/>
+    <nail x="315" y="180"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="385" y="55">JVSEF2M(7,eDispathToSelfLogic,aControllerAutomaton)</label>
+    <label kind="assignment" x="385" y="70">MNSEDispatchToSelfLogic(JNCRA(),7,true,false,IsLoseControl())</label>
+    <nail x="125" y="155"/>
+    <nail x="355" y="155"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="425" y="30">JNSESelfLogicOver(7)</label>
+    <label kind="assignment" x="425" y="45">MNSEDispatchToChild(GHS(),true)</label>
+    <nail x="85" y="130"/>
+    <nail x="395" y="130"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="465" y="5">JVSEF2M(7,eChildOver,aControllerAutomaton)</label>
+    <label kind="assignment" x="465" y="20">MNSEDispatchToParallel(-1)</label>
+    <nail x="45" y="105"/>
+    <nail x="435" y="105"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_C</name>
+<declaration>// Place local declarations here.
+bool mTryFindPath = false;
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">C_serial_initial</name>
+    <urgent/>
+</location>
+<location id="13" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_C_C1</name>
+    <urgent/>
+</location>
+<location id="14" x = "80" y = "542">
+    <name x="70" y="527">Chart_Container_C_C2</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="75" y="200">(!mChart_Container_CExistPath)&amp;&amp;JVSE2M(7,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="215">CommonAutomatonCommunicateWithControllerAndConditional(7,0),ClearChart_Container_CPathSelect()</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="13"/>
+    <label kind="guard" x="100" y="300">JVI2T(7,13,1)</label>
+    <label kind="assignment" x="100" y="315">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="300">JVT2I(7,1)</label>
+    <label kind="assignment" x="50" y="315">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="13"/>
+    <label kind="guard" x="15" y="250">(mChart_Container_CChildPath[0] == 0)&amp;&amp;(mChart_Container_CExistPath)&amp;&amp;JVSE2M(7,aCommonAutomaton)</label>
+    <label kind="assignment" x="15" y="265">mChart_Container_CExistPath = false,mChart_Container_CHistoryState=-1,mChart_Container_CLoseControl=false,mChart_Container_CHistoryState=13,mTryFindPath = false,CommonActionEventConsumed(true,true)</label>
+    <nail x="30" y="200"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="13"/>
+    <label kind="guard" x="75" y="440">(!mChart_Container_CExistPath)&amp;&amp;JVSE2M(7,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="455">CommonAutomatonCommunicateWithControllerAndConditional(7,13),ClearChart_Container_CPathSelect()</label>
+    <nail x="55" y="340"/>
+    <nail x="105" y="340"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="14"/>
+    <label kind="guard" x="100" y="411">JVI2T(7,14,1)</label>
+    <label kind="assignment" x="100" y="426">PopOneEvent()</label>
+    <nail x="130" y="311"/>
+</transition>
+<transition>
+    <source ref="14"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="411">JVT2I(7,1)</label>
+    <label kind="assignment" x="50" y="426">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="311"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="13"/>
+    <label kind="guard" x="140" y="430">(mChart_Container_CChildPath[0] == 1)&amp;&amp;(mChart_Container_CExistPath)&amp;&amp;JVSE2M(7,aCommonAutomaton)</label>
+    <label kind="assignment" x="140" y="445">DispatchEvent(eDeActivationOver,7,-1,aCommonAutomaton),mChart_Container_CExistPath = false</label>
+    <nail x="5" y="380"/>
+    <nail x="155" y="380"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="14"/>
+    <label kind="guard" x="100" y="531">(mChart_Container_CChildPath[0] == 1)&amp;&amp;JVSEF2M(7,eDeActivationOver,aCommonAutomaton)</label>
+    <label kind="assignment" x="100" y="546">PopOneEvent(),mChart_Container_CHistoryState=-1,mChart_Container_CLoseControl=false,mChart_Container_CHistoryState=14,mTryFindPath = false,CommonActionEventConsumed(true,true)</label>
+    <nail x="130" y="431"/>
+</transition>
+<transition>
+    <source ref="14"/>
+    <target ref="14"/>
+    <label kind="guard" x="75" y="662">(!mChart_Container_CExistPath)&amp;&amp;JVSE2M(7,aCommonAutomaton)</label>
+    <label kind="assignment" x="75" y="677">ReturnToController()</label>
+    <nail x="55" y="562"/>
+    <nail x="105" y="562"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_C_C1_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">C1_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(13,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(7)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(13,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(7,13)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(13,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(7,13)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(13,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_C_C2_controller</name>
+<declaration>// Place local declarations here.
+int mRunStatus = mStatusDeActive;
+
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}
+</declaration>
+<location id="0" x = "240" y = "240">
+    <name x="230" y="225">C2_ctrl_initial</name>
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="235" y="360">JVSDaO(14,aControllerAutomaton)</label>
+    <label kind="assignment" x="235" y="375">HandleSimpleDeactivation(7)</label>
+    <nail x="215" y="260"/>
+    <nail x="265" y="260"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="275" y="330">JVSAO(14,aControllerAutomaton)</label>
+    <label kind="assignment" x="275" y="345">HandleSimpleActivationOnStack(7,14)</label>
+    <nail x="190" y="280"/>
+    <nail x="290" y="280"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="330" y="250">JVSAL(14,aControllerAutomaton)</label>
+    <label kind="assignment" x="330" y="265">HandleSimpleActivationLeaveStack(7,14)</label>
+    <nail x="165" y="300"/>
+    <nail x="315" y="300"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="370" y="220">JVSE2MForAll(14,aControllerAutomaton) &amp;&amp; NotDeactiveAndActiveRelatedEvents()</label>
+    <label kind="assignment" x="370" y="235">PopOneEvent()</label>
+    <nail x="140" y="320"/>
+    <nail x="340" y="320"/>
+</transition>
+</template>
+<template>
+<name>Chart_Container_C_conditional</name>
+<declaration>// Place local declarations here.
+int mSourceRecordArray[1];
+const int mSourceRecordLength = 1;
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">C_ser_cond_initial</name>
+    <urgent/>
+</location>
+<location id="13" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container_C_C1</name>
+    <urgent/>
+</location>
+<location id="99947" x = "80" y = "80">
+    <urgent/>
+</location>
+<location id="14" x = "80" y = "542">
+    <name x="70" y="527">Chart_Container_C_C2</name>
+    <urgent/>
+</location>
+<location id="99946" x = "80" y = "80">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="150">JVSE2M(7,aConditionalAutomaton)&amp;&amp;mChart_Container_CPathSelect[0]==2</label>
+    <label kind="assignment" x="90" y="165">mChart_Container_CExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="145" y="70">JVSEF2M(7,eTransToStateDirectly,aConditionalAutomaton)&amp;&amp;(JVSEDestPos(0))</label>
+    <label kind="assignment" x="145" y="85">PopOneEvent()</label>
+    <nail x="30" y="120"/>
+    <nail x="130" y="120"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="13"/>
+    <label kind="guard" x="145" y="150">JVI2T(7,13,0)</label>
+    <label kind="assignment" x="145" y="165">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="0"/>
+    <label kind="guard" x="65" y="250">JVT2I(7,0)</label>
+    <label kind="assignment" x="65" y="265">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99947"/>
+    <label kind="guard" x="50" y="180">mChart_Container_CPathSelect[0]==1&amp;&amp;JVSE2M(7,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_CPathSelect[0]++</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99947"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="180">JVSE2M(7,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(true)</label>
+    <label kind="assignment" x="50" y="195">mChart_Container_CChildPath[0]=-1</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99947"/>
+    <target ref="13"/>
+    <label kind="guard" x="100" y="300">JVSE2M(7,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="100" y="315">mChart_Container_CChildPath[0]=0,mChart_Container_CExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="13"/>
+    <label kind="guard" x="145" y="310">JVSE2M(7,aConditionalAutomaton)&amp;&amp;mChart_Container_CPathSelect[0]==2</label>
+    <label kind="assignment" x="145" y="325">mChart_Container_CExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="30" y="360"/>
+    <nail x="130" y="360"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="14"/>
+    <label kind="guard" x="115" y="361">JVI2T(7,14,0)</label>
+    <label kind="assignment" x="115" y="376">PopOneEvent()</label>
+    <nail x="130" y="311"/>
+</transition>
+<transition>
+    <source ref="14"/>
+    <target ref="0"/>
+    <label kind="guard" x="65" y="361">JVT2I(7,0)</label>
+    <label kind="assignment" x="65" y="376">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="311"/>
+</transition>
+<transition>
+    <source ref="13"/>
+    <target ref="99946"/>
+    <label kind="guard" x="0" y="300">mChart_Container_CPathSelect[0]==1&amp;&amp;JVSE2M(7,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="0" y="315">mChart_Container_CPathSelect[0]++</label>
+    <nail x="30" y="200"/>
+</transition>
+<transition>
+    <source ref="99946"/>
+    <target ref="13"/>
+    <label kind="guard" x="50" y="300">JVSE2M(7,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!((Chart_result))</label>
+    <label kind="assignment" x="50" y="315">mChart_Container_CChildPath[0]=-1</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="99946"/>
+    <target ref="14"/>
+    <label kind="guard" x="100" y="411">JVSE2M(7,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;(Chart_result)</label>
+    <label kind="assignment" x="100" y="426">mChart_Container_CChildPath[0]=1,mChart_Container_CExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="130" y="311"/>
+</transition>
+<transition>
+    <source ref="14"/>
+    <target ref="14"/>
+    <label kind="guard" x="115" y="632">JVSE2M(7,aConditionalAutomaton)&amp;&amp;mChart_Container_CPathSelect[0]==1</label>
+    <label kind="assignment" x="115" y="647">mChart_Container_CExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="30" y="582"/>
+    <nail x="130" y="582"/>
+</transition>
+</template>
+<template>
+<name>Chart_conditional</name>
+<declaration>// Place local declarations here.
+int mSourceRecordArray[1];
+const int mSourceRecordLength = 1;
+</declaration>
+<location id="0" x = "80" y = "80">
+    <name x="70" y="65">Chart_ser_cond_initial</name>
+    <urgent/>
+</location>
+<location id="5" x = "80" y = "320">
+    <name x="70" y="305">Chart_Container</name>
+    <urgent/>
+</location>
+<location id="99944" x = "80" y = "80">
+    <urgent/>
+</location>
+<init ref="0"/>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="90" y="150">JVSE2M(1,aConditionalAutomaton)&amp;&amp;mChartPathSelect[0]==2</label>
+    <label kind="assignment" x="90" y="165">mChartExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="55" y="100"/>
+    <nail x="105" y="100"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="0"/>
+    <label kind="guard" x="145" y="70">JVSEF2M(1,eTransToStateDirectly,aConditionalAutomaton)&amp;&amp;(JVSEDestPos(0))</label>
+    <label kind="assignment" x="145" y="85">PopOneEvent()</label>
+    <nail x="30" y="120"/>
+    <nail x="130" y="120"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="5"/>
+    <label kind="guard" x="145" y="150">JVI2T(1,5,0)</label>
+    <label kind="assignment" x="145" y="165">PopOneEvent()</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="5"/>
+    <target ref="0"/>
+    <label kind="guard" x="65" y="250">JVT2I(1,0)</label>
+    <label kind="assignment" x="65" y="265">DelEvtIfOnlyBack()</label>
+    <nail x="80" y="200"/>
+</transition>
+<transition>
+    <source ref="0"/>
+    <target ref="99944"/>
+    <label kind="guard" x="50" y="180">mChartPathSelect[0]==1&amp;&amp;JVSE2M(1,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="50" y="195">mChartPathSelect[0]++</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99944"/>
+    <target ref="0"/>
+    <label kind="guard" x="50" y="180">JVSE2M(1,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))&amp;&amp;!(true)</label>
+    <label kind="assignment" x="50" y="195">mChartChildPath[0]=-1</label>
+    <nail x="80" y="80"/>
+</transition>
+<transition>
+    <source ref="99944"/>
+    <target ref="5"/>
+    <label kind="guard" x="100" y="300">JVSE2M(1,aConditionalAutomaton)&amp;&amp;(!JVSEF(eTransToStateDirectly))</label>
+    <label kind="assignment" x="100" y="315">mChartChildPath[0]=0,mChartExistPath=true,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="130" y="200"/>
+</transition>
+<transition>
+    <source ref="5"/>
+    <target ref="5"/>
+    <label kind="guard" x="115" y="410">JVSE2M(1,aConditionalAutomaton)&amp;&amp;mChartPathSelect[0]==1</label>
+    <label kind="assignment" x="115" y="425">mChartExistPath=false,MSEAutoType(aCommonAutomaton)</label>
+    <nail x="30" y="360"/>
+    <nail x="130" y="360"/>
+</transition>
+</template>
+<system>// Place template instantiations here.
+Process_all_controller = all_controller();
+Process_junc_49 = junc_49();
+Process_Chart_controller = Chart_controller();
+Process_Chart = Chart();
+Process_Chart_Container_controller = Chart_Container_controller();
+Process_Chart_Container_ctrlaction = Chart_Container_ctrlaction();
+Process_Chart_Container = Chart_Container();
+Process_Chart_Container_A_controller = Chart_Container_A_controller();
+Process_Chart_Container_A = Chart_Container_A();
+Process_Chart_Container_A_A1_controller = Chart_Container_A_A1_controller();
+Process_Chart_Container_A_A2_controller = Chart_Container_A_A2_controller();
+Process_Chart_Container_A_conditional = Chart_Container_A_conditional();
+Process_Chart_Container_B_controller = Chart_Container_B_controller();
+Process_Chart_Container_B = Chart_Container_B();
+Process_Chart_Container_B_B1_controller = Chart_Container_B_B1_controller();
+Process_Chart_Container_B_B3_controller = Chart_Container_B_B3_controller();
+Process_Chart_Container_B_BCount_controller = Chart_Container_B_BCount_controller();
+Process_Chart_Container_B_BCount_ctrlaction = Chart_Container_B_BCount_ctrlaction();
+Process_Chart_Container_B_BCount = Chart_Container_B_BCount();
+Process_Chart_Container_B_BCount_B2_controller = Chart_Container_B_BCount_B2_controller();
+Process_Chart_Container_B_BCount_conditional = Chart_Container_B_BCount_conditional();
+Process_Chart_Container_B_conditional = Chart_Container_B_conditional();
+Process_Chart_Container_C_controller = Chart_Container_C_controller();
+Process_Chart_Container_C = Chart_Container_C();
+Process_Chart_Container_C_C1_controller = Chart_Container_C_C1_controller();
+Process_Chart_Container_C_C2_controller = Chart_Container_C_C2_controller();
+Process_Chart_Container_C_conditional = Chart_Container_C_conditional();
+Process_Chart_conditional = Chart_conditional();
+system Process_all_controller,Process_junc_49,Process_Chart_controller,Process_Chart,Process_Chart_Container_controller,Process_Chart_Container_ctrlaction,Process_Chart_Container,Process_Chart_Container_A_controller,Process_Chart_Container_A,Process_Chart_Container_A_A1_controller,Process_Chart_Container_A_A2_controller,Process_Chart_Container_A_conditional,Process_Chart_Container_B_controller,Process_Chart_Container_B,Process_Chart_Container_B_B1_controller,Process_Chart_Container_B_B3_controller,Process_Chart_Container_B_BCount_controller,Process_Chart_Container_B_BCount_ctrlaction,Process_Chart_Container_B_BCount,Process_Chart_Container_B_BCount_B2_controller,Process_Chart_Container_B_BCount_conditional,Process_Chart_Container_B_conditional,Process_Chart_Container_C_controller,Process_Chart_Container_C,Process_Chart_Container_C_C1_controller,Process_Chart_Container_C_C2_controller,Process_Chart_Container_C_conditional,Process_Chart_conditional;
+</system>
+<queries>
+</queries>
+</nta>
