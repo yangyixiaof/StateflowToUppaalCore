@@ -1,0 +1,19 @@
+bool JNCRA()
+{
+    return mRunStatus == mStatusActive;
+}
+
+void MNRA()
+{
+    mRunStatus = mStatusActive;
+}
+
+bool JNCRDA()
+{
+    return mRunStatus == mStatusDeActive;
+}
+
+void MNRDA()
+{
+    mRunStatus = mStatusDeActive;
+}

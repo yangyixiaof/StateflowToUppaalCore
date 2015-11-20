@@ -1,0 +1,21 @@
+void ReturnToController()
+{
+	MSEAutoType(aControllerAutomaton);
+    //MSEAutoInfo(iSelfLogicOver);
+    DispatchEvent(eSelfLogicOver,GetStackTopDest(),GetStackTopInfo(),aControllerAutomaton);
+}
+
+void CommonAutomatonCommunicateWithControllerAndConditional(int parentid,int childid)
+{
+    if (mTryFindPath)
+    {
+        mTryFindPath = false;
+        ReturnToController();
+    }
+    else
+    {
+    	mTryFindPath = true;
+        MSEAutoType(aConditionalAutomaton);
+        ResetConditionAutomaton(parentid,childid);
+    }
+}

@@ -1,0 +1,64 @@
+// Place global declarations here.
+typedef struct
+{
+    int mEvent;
+    int mDest;
+    int mDestCPosition;// This is state ID. Only activation used , this is what the child state who send the activation ID is.
+    int mInfo;
+    bool mValid;
+    int mAutomatonType;
+    int mCEPosition;   // This is state ID.
+    int mPahse;
+} StackFrame;
+
+const int MaxStackSize = 512;
+const int aConditionalAutomaton = 0;
+const int aCommonAutomaton = 1;
+const int aControllerAutomaton = 2;
+const int aControllerActionAutomaton = 3;
+const int vValidEventBase = 40;
+const int eTrigger = vValidEventBase;
+const int eActiveChild = -19;
+const int eActiveParallel = -18;
+const int eChildOver = -17;
+const int eSelfLogicOver = -16;
+const int eDispathToSelfLogic = -15;
+const int eDuring = -14;
+const int eExitActionOver = -13;
+const int eDeActivationJudgeOver = -12;
+const int eDefaultActivation = -11;
+const int eDeActivation = -10;
+const int eActivationJudgeOver = -9;
+const int eActivation = -8;
+const int eTransToStateDirectly = -7;
+const int eDeActivationOver = -5;
+//const int eActivationOver = -4;
+const int eJudgeActionOver = -3;
+const int mStatusActive = -5;
+const int mStatusDeActive = -6;
+const int iStayOnStack = -1;
+const int iConsumedStack = 0;
+const int iTransOnlyBack = -12;
+const int iDuringOver = -13;
+const int iSelfLogicOver = -14;
+const int iCouldDispatchToParallel = -15;
+const int iActivationDrivenEvent = -16;
+const int iOnlyToThisState = -17;
+
+
+int mEmptyOp = 0;
+
+int mActStopStateID = -1;
+
+//int RecentFirstActivationIdx = -1;
+//int RecentFirstDeActivationIdx = -1;
+
+int mExecutionStackTop = -1;
+StackFrame mExecutionStack[MaxStackSize+1];
+
+//stack record.
+int mStackTopDestChildRecord;
+int mStackTopEventIdRecord;
+
+//history state used both by runner and controller.
+//int mSSIDHistoryState = -1;etc.
